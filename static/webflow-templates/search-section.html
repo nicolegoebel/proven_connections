@@ -1,0 +1,80 @@
+<!-- Search Section -->
+<div class="search-section">
+  <div class="container-large">
+    <div class="search-grid">
+      <!-- Vendor Search Column -->
+      <div class="search-column">
+        <div class="search-card">
+          <h3 class="search-heading">Search Vendors</h3>
+          <div class="search-input-wrapper">
+            <select class="vendor-search-input" data-search="vendor">
+              <option></option>
+            </select>
+          </div>
+          <!-- Vendor Results Container -->
+          <div class="vendor-results-wrapper">
+            <div class="vendor-header" style="display: none;">
+              <h4 class="relationship-header">Company <span class="vendor-name"></span> provides deals to the following clients:</h4>
+            </div>
+            <div class="vendor-stats-container"></div>
+            <div class="vendor-results"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Client Search Column -->
+      <div class="search-column">
+        <div class="search-card">
+          <h3 class="search-heading">Search Clients</h3>
+          <div class="search-input-wrapper">
+            <select class="client-search-input" data-search="client">
+              <option></option>
+            </select>
+          </div>
+          <!-- Client Results Container -->
+          <div class="client-results-wrapper">
+            <div class="client-header" style="display: none;">
+              <h4 class="relationship-header">Client <span class="client-name"></span> gets deals from the following companies:</h4>
+            </div>
+            <div class="client-stats-container"></div>
+            <div class="client-results"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Company Card Template (Hidden) -->
+<div class="company-card-template" style="display: none;">
+  <div class="company-card">
+    <div class="company-card-header">
+      <img src="" alt="" class="company-logo">
+      <div class="company-info">
+        <h4 class="company-name"></h4>
+        <p class="company-domain"></p>
+      </div>
+    </div>
+    <div class="company-card-body">
+      <p class="company-location"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Template (Hidden) -->
+<div class="stats-template" style="display: none;">
+  <div class="stats-container">
+    <div class="stat-item">
+      <span class="stat-number total-count">0</span>
+      <span class="stat-label">Total</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number with-location">0</span>
+      <span class="stat-label">With Location</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-number with-logo">0</span>
+      <span class="stat-label">With Logo</span>
+    </div>
+  </div>
+</div>
