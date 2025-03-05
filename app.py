@@ -1,8 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from dotenv import load_dotenv
 import pandas as pd
 import os
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI()
 
@@ -23,7 +27,7 @@ async def read_root():
 @app.get("/api/config/map")
 async def get_map_config():
     return {
-        "accessToken": "pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA",
+        "accessToken": os.getenv("MAPBOX_ACCESS_TOKEN"),
         "style": "mapbox://styles/mapbox/light-v11",
         "center": [-95.7129, 37.0902],  # Center of USA
         "zoom": 3
