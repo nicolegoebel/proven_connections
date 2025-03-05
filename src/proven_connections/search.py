@@ -50,6 +50,44 @@ class RelationshipSearch:
             clients.append(client_data)
         return sorted(clients, key=lambda x: x['name'])
     
+    def get_vendor_details(self, vendor_name: str) -> Dict[str, Any]:
+        """Get details for a specific vendor."""
+        # Case-insensitive match for vendor name, handling NaN values
+        vendor_row = self.df[self.df['vendor_name'].fillna('').str.lower() == vendor_name.lower()].iloc[0] if not self.df[self.df['vendor_name'].fillna('').str.lower() == vendor_name.lower()].empty else None
+        
+        if vendor_row is None:
+            return None
+            
+        # Only include non-NaN values
+        vendor_data = {
+            'name': vendor_row['vendor_name'] if pd.notna(vendor_row['vendor_name']) else None,
+            'domain': vendor_row['vendor_domain'] if pd.notna(vendor_row['vendor_domain']) else None,
+            'logo': vendor_row['vendor_logo'] if pd.notna(vendor_row['vendor_logo']) else None,
+            'latitude': vendor_row['vendor_lat'] if pd.notna(vendor_row['vendor_lat']) else None,
+            'longitude': vendor_row['vendor_lng'] if pd.notna(vendor_row['vendor_lng']) else None
+        }
+        # Remove None values
+        return {k: v for k, v in vendor_data.items() if v is not None}
+
+    def get_client_details(self, client_name: str) -> Dict[str, Any]:
+        """Get details for a specific client."""
+        # Case-insensitive match for client name, handling NaN values
+        client_row = self.df[self.df['client_name'].fillna('').str.lower() == client_name.lower()].iloc[0] if not self.df[self.df['client_name'].fillna('').str.lower() == client_name.lower()].empty else None
+        
+        if client_row is None:
+            return None
+            
+        # Only include non-NaN values
+        client_data = {
+            'name': client_row['client_name'] if pd.notna(client_row['client_name']) else None,
+            'domain': client_row['client_domain'] if pd.notna(client_row['client_domain']) else None,
+            'logo': client_row['client_logo'] if pd.notna(client_row['client_logo']) else None,
+            'latitude': client_row['client_lat'] if pd.notna(client_row['client_lat']) else None,
+            'longitude': client_row['client_lng'] if pd.notna(client_row['client_lng']) else None
+        }
+        # Remove None values
+        return {k: v for k, v in client_data.items() if v is not None}
+
     def get_client_vendors(self, client_name: str) -> List[Dict[str, Any]]:
         """Get all unique vendors for a specific client with their details."""
         # Case-insensitive match for client name, handling NaN values

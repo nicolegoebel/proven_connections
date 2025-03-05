@@ -5,7 +5,7 @@ import time
 from typing import Optional, Dict, Any, List
 import json
 
-CLEARBIT_API_KEY = 'sk_5b6d6a22d28f21aad880ce891449f1d9'
+from .config import CLEARBIT_API_KEY
 
 def get_company_info_by_domain(domain: str, max_retries: int = 3) -> Optional[Dict[str, Any]]:
     """Get company information from Clearbit API with retry logic for 202 responses."""

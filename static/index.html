@@ -12,6 +12,10 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     
+    <!-- Mapbox GL JS -->
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+    
     <style>
         /* Base styles */
         body {
@@ -50,23 +54,6 @@
         
         .search-input-wrapper {
             margin-bottom: 20px;
-        }
-        
-        .search-button {
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.2s;
-            margin-top: 10px;
-            width: 100%;
-        }
-        
-        .search-button:hover {
-            background-color: #1d4ed8;
         }
         
         .relationship-header {
@@ -125,9 +112,50 @@
             margin-bottom: 10px;
         }
         
+        /* Map styles */
+        .map-container {
+            margin-top: 30px;
+            width: 100%;
+            height: 500px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .mapboxgl-popup {
+            max-width: 300px;
+        }
+
+        .mapboxgl-popup-content {
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .mapboxgl-popup-content h3 {
+            margin: 0 0 10px 0;
+            color: #2563eb;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .mapboxgl-popup-content p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+
         @media (max-width: 768px) {
             .search-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .map-container {
+                height: 400px;
             }
         }
     </style>
@@ -144,7 +172,6 @@
                     <select class="vendor-search-input">
                         <option></option>
                     </select>
-                    <button class="search-button vendor-search-btn">Search for Clients</button>
                 </div>
                 <div class="vendor-header">
                     <h4 class="relationship-header">Company <span class="vendor-name"></span> provides deals to the following <span class="count"></span> clients:</h4>
@@ -155,12 +182,11 @@
             
             <!-- Client Search Column -->
             <div class="search-column">
-                <h3 class="search-heading">Search for a Client's current company deals:</h3>
+                <h3 class="search-heading">Search for a Client's current vendors:</h3>
                 <div class="search-input-wrapper">
                     <select class="client-search-input">
                         <option></option>
                     </select>
-                    <button class="search-button client-search-btn">Search for Company Deals</button>
                 </div>
                 <div class="client-header">
                     <h4 class="relationship-header">Client <span class="client-name"></span> receives deals from the following <span class="count"></span> companies:</h4>
@@ -169,183 +195,14 @@
                 <div class="client-results"></div>
             </div>
         </div>
+        
+        <!-- Map container -->
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
     </div>
     
-    <script>
-        const API_ENDPOINT = 'http://localhost:8000';
-        
-        $(document).ready(function() {
-            // Initialize Select2
-            const vendorSearch = $('.vendor-search-input').select2({
-                placeholder: 'Type to search vendors...',
-                allowClear: true,
-                ajax: {
-                    url: `${API_ENDPOINT}/api/search/vendors`,
-                    dataType: 'json',
-                    delay: 250,
-                    data: function(params) {
-                        return {
-                            q: params.term || ''
-                        };
-                    },
-                    processResults: function(data) {
-                        return {
-                            results: data.map(item => ({
-                                id: item,
-                                text: item
-                            }))
-                        };
-                    },
-                    cache: true
-                },
-                minimumInputLength: 1
-            });
-
-            const clientSearch = $('.client-search-input').select2({
-                placeholder: 'Type to search clients...',
-                allowClear: true,
-                ajax: {
-                    url: `${API_ENDPOINT}/api/search/clients`,
-                    dataType: 'json',
-                    delay: 250,
-                    data: function(params) {
-                        return {
-                            q: params.term || ''
-                        };
-                    },
-                    processResults: function(data) {
-                        return {
-                            results: data.map(item => ({
-                                id: item,
-                                text: item
-                            }))
-                        };
-                    },
-                    cache: true
-                },
-                minimumInputLength: 1
-            });
-
-            // Handle vendor search button click
-            $('.vendor-search-btn').click(function() {
-                const vendorName = vendorSearch.val();
-                if (!vendorName) return;
-                
-                // Clear previous results
-                $('.vendor-results').empty();
-                $('.vendor-stats-container').empty();
-                
-                // Show and update the header
-                $('.vendor-header .relationship-header').show();
-                $('.vendor-header .vendor-name').text(vendorName);
-                
-                fetch(`${API_ENDPOINT}/api/vendor/${encodeURIComponent(vendorName)}/clients`)
-                    .then(response => response.json())
-                    .then(data => {
-                        displayResults(data.clients, $('.vendor-results'));
-                        displayStats(data.stats, $('.vendor-stats-container'));
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        $('.vendor-results').html('<div class="error-message">Failed to fetch clients</div>');
-                    });
-            });
-
-            // Handle client search button click
-            $('.client-search-btn').click(function() {
-                const clientName = clientSearch.val();
-                if (!clientName) return;
-                
-                // Clear previous results
-                $('.client-results').empty();
-                $('.client-stats-container').empty();
-                
-                // Show and update the header
-                $('.client-header .relationship-header').show();
-                $('.client-header .client-name').text(clientName);
-                
-                fetch(`${API_ENDPOINT}/api/client/${encodeURIComponent(clientName)}/vendors`)
-                    .then(response => response.json())
-                    .then(data => {
-                        displayResults(data.vendors, $('.client-results'));
-                        displayStats(data.stats, $('.client-stats-container'));
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        $('.client-results').html('<div class="error-message">Failed to fetch vendors</div>');
-                    });
-            });
-
-            function displayResults(companies, container) {
-                const isVendorSearch = container.hasClass('vendor-results');
-                const header = container.closest('.search-column').find('.relationship-header');
-                const nameSpan = isVendorSearch ? header.find('.vendor-name') : header.find('.client-name');
-                const name = nameSpan.text();
-
-                if (!companies || companies.length === 0) {
-                    container.html('<div class="no-results">No relationships found.</div>');
-                    // Update header for zero case
-                    if (isVendorSearch) {
-                        header.html(`Company ${name} provides no deals to clients at the moment`);
-                    } else {
-                        header.html(`Client ${name} receives no deals from companies at the moment`);
-                    }
-                    return;
-                }
-                
-                // Update header based on count
-                if (isVendorSearch) {
-                    const suffix = companies.length === 1 ? 'client' : 'clients';
-                    header.html(`Company ${name} provides deals to the following ${companies.length} ${suffix}:`);
-                } else {
-                    const suffix = companies.length === 1 ? 'company' : 'companies';
-                    header.html(`Client ${name} receives deals from the following ${companies.length} ${suffix}:`);
-                }
-
-                const list = $('<ul class="company-list"></ul>');
-                
-                companies.forEach(company => {
-                    const item = $('<li class="company-item"></li>');
-                    const name = company.name || 'Unknown Company';
-                    
-                    // Create HTML for domain link if domain exists
-                    let domainHtml = '';
-                    if (company.domain) {
-                        const domainUrl = company.domain.startsWith('http') ? company.domain : `https://${company.domain}`;
-                        domainHtml = ` (<a href="${domainUrl}" target="_blank" rel="noopener noreferrer" class="domain-link">${company.domain}</a>)`;
-                    }
-                    
-                    // Set HTML content instead of text
-                    item.html(`${name}${domainHtml}`);
-                    list.append(item);
-                });
-                
-                container.append(list);
-            }
-
-            function displayStats(stats, container) {
-                if (!stats) return;
-                
-                const statsHtml = `
-                    <div class="stats-container">
-                        <div class="stat-item">
-                            <span class="stat-number">${stats.total || 0}</span>
-                            <span class="stat-label">Total</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">${stats.with_location || 0}</span>
-                            <span class="stat-label">With Location</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">${stats.with_logo || 0}</span>
-                            <span class="stat-label">With Logo</span>
-                        </div>
-                    </div>
-                `;
-                
-                container.html(statsHtml);
-            }
-        });
-    </script>
+    <!-- Load our custom script -->
+    <script src="/static/script.js"></script>
 </body>
 </html>

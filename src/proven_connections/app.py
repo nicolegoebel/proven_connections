@@ -6,7 +6,8 @@ from fastapi.middleware.gzip import GZipMiddleware
 from typing import Optional, List, Dict, Any
 import os
 import json
-from search import RelationshipSearch
+from proven_connections.search import RelationshipSearch
+from proven_connections.config import MAPBOX_ACCESS_TOKEN, DEFAULT_MAP_STYLE, DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM
 
 app = FastAPI(title="Proven Connections Search")
 
@@ -36,6 +37,16 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 # Cache for frequently accessed data
 vendor_cache = {}
 client_cache = {}
+
+@app.get("/api/config/map")
+async def get_map_config():
+    """Get Mapbox configuration settings."""
+    return {
+        "accessToken": MAPBOX_ACCESS_TOKEN,
+        "style": DEFAULT_MAP_STYLE,
+        "center": DEFAULT_MAP_CENTER,
+        "zoom": DEFAULT_MAP_ZOOM
+    }
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
@@ -69,11 +80,18 @@ async def search_clients(q: str, limit: Optional[int] = 10):
 async def get_vendor_clients(vendor_name: str, include_stats: bool = False):
     """Get all clients for a specific vendor with optional statistics."""
     try:
-        clients = search.get_vendor_clients(vendor_name)
-        if not clients:
+        # Get vendor details and clients
+        vendor_details = search.get_vendor_details(vendor_name)
+        if not vendor_details:
             raise HTTPException(status_code=404, detail="Vendor not found")
+            
+        clients = search.get_vendor_clients(vendor_name)
         
         response = {
+            "vendor_name": vendor_name,
+            "vendor_domain": vendor_details.get("domain"),
+            "vendor_latitude": vendor_details.get("latitude"),
+            "vendor_longitude": vendor_details.get("longitude"),
             "clients": clients,
             "total_count": len(clients)
         }
@@ -92,11 +110,18 @@ async def get_vendor_clients(vendor_name: str, include_stats: bool = False):
 async def get_client_vendors(client_name: str, include_stats: bool = False):
     """Get all vendors for a specific client with optional statistics."""
     try:
-        vendors = search.get_client_vendors(client_name)
-        if not vendors:
+        # Get client details and vendors
+        client_details = search.get_client_details(client_name)
+        if not client_details:
             raise HTTPException(status_code=404, detail="Client not found")
+            
+        vendors = search.get_client_vendors(client_name)
         
         response = {
+            "client_name": client_name,
+            "client_domain": client_details.get("domain"),
+            "client_latitude": client_details.get("latitude"),
+            "client_longitude": client_details.get("longitude"),
             "vendors": vendors,
             "total_count": len(vendors)
         }
