@@ -62,32 +62,40 @@ function addCompanyToMap(company, isCenter = false) {
     el.style.border = '3px solid white';
     el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
     el.style.cursor = 'pointer';
-    el.style.transition = 'transform 0.2s';
-
-    // Add hover effect
-    el.addEventListener('mouseenter', () => {
-        el.style.transform = 'scale(1.2)';
-    });
-    el.addEventListener('mouseleave', () => {
-        el.style.transform = 'scale(1)';
-    });
 
     // Create popup
-    const popupContent = document.createElement('div');
-    popupContent.className = 'popup-content';
-    popupContent.innerHTML = `
-        <h4>${company.name}</h4>
-        ${company.domain ? `<a href="https://${company.domain}" target="_blank" class="popup-domain">${company.domain}</a>` : ''}
-    `;
-
-    const popup = new mapboxgl.Popup()
-        .setDOMContent(popupContent);
+    const popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset: 25,
+        className: 'custom-popup'
+    })
+    .setHTML(`
+        <div class="popup-content">
+            <h4>${company.name}</h4>
+            ${company.domain ? `<a href="https://${company.domain}" target="_blank" class="popup-domain">${company.domain}</a>` : ''}
+        </div>
+    `);
 
     // Create marker
-    const marker = new mapboxgl.Marker(el)
-        .setLngLat([company.longitude, company.latitude])
-        .setPopup(popup)
-        .addTo(map);
+    const marker = new mapboxgl.Marker({
+        element: el,
+        anchor: 'center'
+    })
+    .setLngLat([company.longitude, company.latitude])
+    .setPopup(popup)
+    .addTo(map);
+
+    // Show popup on hover
+    el.addEventListener('mouseenter', () => {
+        marker.getPopup().addTo(map);
+        el.style.backgroundColor = isCenter ? '#1d4ed8' : '#475569';
+    });
+    
+    el.addEventListener('mouseleave', () => {
+        marker.getPopup().remove();
+        el.style.backgroundColor = isCenter ? '#2563eb' : '#64748b';
+    });
 
     currentMarkers.push(marker);
     return marker;
