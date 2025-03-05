@@ -11,7 +11,7 @@ async function initializeMap() {
         mapboxgl.accessToken = config.accessToken;
         map = new mapboxgl.Map({
             container: 'map',
-            style: config.style,
+            style: 'mapbox://styles/mapbox/light-v11',
             center: config.center,
             zoom: config.zoom
         });
@@ -42,22 +42,38 @@ function addCompanyToMap(company, isCenter = false) {
 
     const el = document.createElement('div');
     el.className = 'marker';
-    el.style.width = '15px';
-    el.style.height = '15px';
+    el.style.width = '20px';
+    el.style.height = '20px';
     el.style.borderRadius = '50%';
     el.style.backgroundColor = isCenter ? '#2563eb' : '#64748b';
-    el.style.border = '2px solid white';
-    el.style.boxShadow = '0 0 0 1px rgba(0,0,0,0.1)';
+    el.style.border = '3px solid white';
+    el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+    el.style.cursor = 'pointer';
+    el.style.transition = 'transform 0.2s';
 
+    // Add hover effect
+    el.addEventListener('mouseenter', () => {
+        el.style.transform = 'scale(1.2)';
+    });
+    el.addEventListener('mouseleave', () => {
+        el.style.transform = 'scale(1)';
+    });
+
+    // Create popup
+    const popupContent = document.createElement('div');
+    popupContent.className = 'popup-content';
+    popupContent.innerHTML = `
+        <h4>${company.name}</h4>
+        ${company.domain ? `<a href="https://${company.domain}" target="_blank" class="popup-domain">${company.domain}</a>` : ''}
+    `;
+
+    const popup = new mapboxgl.Popup()
+        .setDOMContent(popupContent);
+
+    // Create marker
     const marker = new mapboxgl.Marker(el)
         .setLngLat([company.longitude, company.latitude])
-        .setPopup(
-            new mapboxgl.Popup({ offset: 25 })
-                .setHTML(
-                    `<h3>${company.name}</h3>
-                     <p>${company.domain || ''}</p>`
-                )
-        )
+        .setPopup(popup)
         .addTo(map);
 
     currentMarkers.push(marker);
@@ -65,26 +81,37 @@ function addCompanyToMap(company, isCenter = false) {
 }
 
 function drawConnection(source, target, index) {
-    if (!source || !target) return;
+    if (!source || !target || !source.longitude || !source.latitude || !target.longitude || !target.latitude) return;
 
     const connectionId = `connection-${index}`;
     currentConnections.push(connectionId);
 
-    // Calculate a midpoint with an offset for the curve
-    const mid = [
-        (source.longitude + target.longitude) / 2,
-        (source.latitude + target.latitude) / 2
-    ];
-    
-    // Add some variation to the curve height based on distance
-    const distance = Math.sqrt(
-        Math.pow(target.longitude - source.longitude, 2) +
-        Math.pow(target.latitude - source.latitude, 2)
-    );
-    
-    const curveHeight = distance * 0.2;
-    mid[1] += curveHeight;
+    // Calculate midpoint
+    const midLon = (source.longitude + target.longitude) / 2;
+    const midLat = (source.latitude + target.latitude) / 2;
 
+    // Calculate distance for curve height
+    const dx = target.longitude - source.longitude;
+    const dy = target.latitude - source.latitude;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Add curve by creating a control point above the midpoint
+    const curveHeight = distance * 0.2;
+    const controlPoint = [midLon, midLat + curveHeight];
+
+    // Generate curved path using quadratic Bezier
+    const curvePoints = [];
+    const steps = 50;
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const point = [
+            (1 - t) * (1 - t) * source.longitude + 2 * (1 - t) * t * controlPoint[0] + t * t * target.longitude,
+            (1 - t) * (1 - t) * source.latitude + 2 * (1 - t) * t * controlPoint[1] + t * t * target.latitude
+        ];
+        curvePoints.push(point);
+    }
+
+    // Add the curve layer
     map.addLayer({
         'id': connectionId,
         'type': 'line',
@@ -95,11 +122,7 @@ function drawConnection(source, target, index) {
                 'properties': {},
                 'geometry': {
                     'type': 'LineString',
-                    'coordinates': [
-                        [source.longitude, source.latitude],
-                        mid,
-                        [target.longitude, target.latitude]
-                    ]
+                    'coordinates': curvePoints
                 }
             }
         },
@@ -131,6 +154,76 @@ function updateMapView(companies) {
     });
 }
 
+function displayCompanies(data, containerId, type) {
+    const resultsContainer = $(containerId).empty();
+    
+    if (!data || !data.center || !data.related || data.related.length === 0) {
+        resultsContainer.append(`<p>No ${type.toLowerCase()} found.</p>`);
+        return;
+    }
+
+    const centerCompany = data.center;
+    const companies = data.related;
+
+    // Display header with count
+    const count = companies.length;
+    let headerText;
+    if (type === 'Clients') {
+        headerText = count === 1
+            ? `Company ${centerCompany.name} provides deals to the following 1 client:`
+            : count === 0
+            ? `Company ${centerCompany.name} provides no deals to clients at the moment`
+            : `Company ${centerCompany.name} provides deals to the following ${count} clients:`;
+    } else {
+        headerText = count === 1
+            ? `Client ${centerCompany.name} receives deals from the following 1 company:`
+            : count === 0
+            ? `Client ${centerCompany.name} receives no deals from companies at the moment`
+            : `Client ${centerCompany.name} receives deals from the following ${count} companies:`;
+    }
+    resultsContainer.append(`<h3>${headerText}</h3>`);
+
+    // Create cards for each company
+    companies.forEach(company => {
+        const card = $('<div>').addClass('company-card');
+        const nameEl = $('<h4>').text(company.name);
+        card.append(nameEl);
+
+        if (company.domain) {
+            const domainLink = $('<a>')
+                .addClass('company-domain')
+                .attr('href', `https://${company.domain}`)
+                .attr('target', '_blank')
+                .text(company.domain);
+            card.append(domainLink);
+        }
+
+        resultsContainer.append(card);
+    });
+
+    // Update map
+    clearMap();
+    const centerMarker = addCompanyToMap(centerCompany, true);
+
+    // Add company markers and connections
+    companies.forEach((company, index) => {
+        const marker = addCompanyToMap(company);
+        if (marker && centerMarker) {
+            drawConnection(centerCompany, company, index);
+        }
+    });
+
+    // Update map view
+    updateMapView([centerCompany, ...companies]);
+}
+
+function displayError(containerId, message) {
+    $(containerId).empty().append(
+        `<div class="error-message">${message}</div>`
+    );
+}
+
+// Initialize when document is ready
 $(document).ready(async function() {
     // Initialize the map
     await initializeMap();
@@ -150,10 +243,10 @@ $(document).ready(async function() {
             },
             processResults: function(data) {
                 return {
-                    results: data.map(function(item) {
+                    results: data.results.map(function(item) {
                         return {
-                            id: item,
-                            text: item
+                            id: item.name,
+                            text: item.name
                         };
                     })
                 };
@@ -178,10 +271,10 @@ $(document).ready(async function() {
             },
             processResults: function(data) {
                 return {
-                    results: data.map(function(item) {
+                    results: data.results.map(function(item) {
                         return {
-                            id: item,
-                            text: item
+                            id: item.name,
+                            text: item.name
                         };
                     })
                 };
@@ -194,132 +287,41 @@ $(document).ready(async function() {
     // Handle vendor selection
     $('#vendor-search').on('select2:select', function(e) {
         const vendorName = e.params.data.id;
-        fetchVendorClients(vendorName);
+        $.get(`/api/relationships/vendor/${encodeURIComponent(vendorName)}`)
+            .done(function(data) {
+                if (data && data.center) {
+                    displayCompanies(data, '#vendor-results', 'Clients');
+                } else {
+                    displayError('#vendor-results', 'No relationships found for this vendor');
+                }
+            })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('Failed to fetch clients:', errorThrown);
+                displayError('#vendor-results', 'Failed to fetch clients');
+            });
     });
 
     // Handle client selection
     $('#client-search').on('select2:select', function(e) {
         const clientName = e.params.data.id;
-        fetchClientVendors(clientName);
+        $.get(`/api/relationships/client/${encodeURIComponent(clientName)}`)
+            .done(function(data) {
+                if (data && data.center) {
+                    displayCompanies(data, '#client-results', 'Vendors');
+                } else {
+                    displayError('#client-results', 'No relationships found for this client');
+                }
+            })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                console.error('Failed to fetch vendors:', errorThrown);
+                displayError('#client-results', 'Failed to fetch vendors');
+            });
     });
 
-    // Clear results when selection is cleared
-    $('#vendor-search').on('select2:clear', function() {
-        $('#vendor-clients').empty();
-        clearMap();
-    });
-
-    $('#client-search').on('select2:clear', function() {
-        $('#client-vendors').empty();
+    // Handle clear
+    $('#vendor-search, #client-search').on('select2:clear', function() {
+        const resultId = $(this).attr('id') === 'vendor-search' ? '#vendor-results' : '#client-results';
+        $(resultId).empty();
         clearMap();
     });
 });
-
-function fetchVendorClients(vendorName) {
-    $.get(`/api/vendor/${encodeURIComponent(vendorName)}/clients`)
-        .done(function(data) {
-            displayCompanies(data.clients, '#vendor-clients', 'Clients');
-
-            // Update map with vendor and clients
-            clearMap();
-            const vendor = {
-                name: vendorName,
-                domain: data.vendor_domain,
-                latitude: data.vendor_latitude,
-                longitude: data.vendor_longitude
-            };
-            addCompanyToMap(vendor, true);
-
-            // Add client markers and connections
-            data.clients.forEach((client, index) => {
-                if (client.latitude && client.longitude) {
-                    addCompanyToMap(client);
-                    drawConnection(vendor, client, index);
-                }
-            });
-
-            // Update map view
-            updateMapView([vendor, ...data.clients]);
-        })
-        .fail(function(jqXHR) {
-            displayError('#vendor-clients', 'Failed to fetch clients');
-        });
-}
-
-function fetchClientVendors(clientName) {
-    $.get(`/api/client/${encodeURIComponent(clientName)}/vendors`)
-        .done(function(data) {
-            displayCompanies(data.vendors, '#client-vendors', 'Vendors');
-
-            // Update map with client and vendors
-            clearMap();
-            const client = {
-                name: clientName,
-                domain: data.client_domain,
-                latitude: data.client_latitude,
-                longitude: data.client_longitude
-            };
-            addCompanyToMap(client, true);
-
-            // Add vendor markers and connections
-            data.vendors.forEach((vendor, index) => {
-                if (vendor.latitude && vendor.longitude) {
-                    addCompanyToMap(vendor);
-                    drawConnection(client, vendor, index);
-                }
-            });
-
-            // Update map view
-            updateMapView([client, ...data.vendors]);
-        })
-        .fail(function(jqXHR) {
-            displayError('#client-vendors', 'Failed to fetch vendors');
-        });
-}
-
-function displayCompanies(companies, containerId, type) {
-    const container = $(containerId);
-    container.empty();
-    
-    if (companies.length === 0) {
-        container.append(`<div class="alert alert-info">No ${type.toLowerCase()} found.</div>`);
-        return;
-    }
-
-    companies.forEach(function(company) {
-        const card = $(`
-            <div class="card company-card">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-auto">
-                            ${company.logo ? 
-                                `<img src="${company.logo}" alt="${company.name} logo" class="company-logo">` :
-                                '<div class="company-logo-placeholder"></div>'
-                            }
-                        </div>
-                        <div class="col">
-                            <h5 class="card-title mb-1">${company.name}</h5>
-                            <p class="card-text text-muted mb-1">
-                                <small>${company.domain || 'No domain available'}</small>
-                            </p>
-                            ${company.latitude && company.longitude ?
-                                `<p class="card-text"><small>Location: ${company.latitude.toFixed(4)}, ${company.longitude.toFixed(4)}</small></p>` :
-                                '<p class="card-text"><small>Location: Not available</small></p>'
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `);
-        container.append(card);
-    });
-}
-
-function displayError(containerId, message) {
-    const container = $(containerId);
-    container.empty().append(`
-        <div class="alert alert-danger">
-            ${message}
-        </div>
-    `);
-}
