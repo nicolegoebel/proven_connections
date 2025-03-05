@@ -8,6 +8,10 @@ async function initializeMap() {
         const response = await fetch('/api/config/map');
         const config = await response.json();
         
+        if (!config.accessToken) {
+            throw new Error('No Mapbox access token found');
+        }
+        
         mapboxgl.accessToken = config.accessToken;
         map = new mapboxgl.Map({
             container: 'map',
@@ -15,8 +19,17 @@ async function initializeMap() {
             center: config.center,
             zoom: config.zoom
         });
+
+        // Wait for map to load
+        await new Promise((resolve, reject) => {
+            map.on('load', resolve);
+            map.on('error', reject);
+        });
+
+        console.log('Map initialized successfully');
     } catch (error) {
         console.error('Failed to initialize map:', error);
+        $('#map').html('<div class="error-message">Failed to load map. Please check your Mapbox access token.</div>');
     }
 }
 
@@ -159,8 +172,12 @@ function displayCompanies(data, containerId, type) {
     
     if (!data || !data.center || !data.related || data.related.length === 0) {
         resultsContainer.append(`<p>No ${type.toLowerCase()} found.</p>`);
+        clearMap();
         return;
     }
+
+    // Clear previous markers and connections
+    clearMap();
 
     const centerCompany = data.center;
     const companies = data.related;

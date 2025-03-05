@@ -4,11 +4,22 @@ from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 import pandas as pd
 import os
+import uvicorn
 
 # Load environment variables
 load_dotenv()
 
 app = FastAPI()
+
+# Enable CORS
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -26,12 +37,19 @@ async def read_root():
 
 @app.get("/api/config/map")
 async def get_map_config():
+    token = os.environ.get("MAPBOX_ACCESS_TOKEN")
+    if not token:
+        raise HTTPException(status_code=500, detail="Mapbox access token not found")
+    print(f"Token length: {len(token)}")  # Debug print
     return {
-        "accessToken": os.getenv("MAPBOX_ACCESS_TOKEN"),
+        "accessToken": token,
         "style": "mapbox://styles/mapbox/light-v11",
         "center": [-95.7129, 37.0902],  # Center of USA
         "zoom": 3
     }
+
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=8002, reload=True)
 
 @app.get("/api/search/vendors")
 async def search_vendors(q: str = ""):
