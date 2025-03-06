@@ -354,49 +354,111 @@ async function displayCompanies(data, containerId, type) {
 
     // Display header with count
     const count = companies.length;
+    const isServiceProvider = type === 'Clients';
+    
+    // Create header with company name
+    const headerNameSpan = $('<span>')
+        .text(centerCompany.name)
+        .css('font-weight', '600');
+    
     let headerText;
-    if (type === 'Clients') {
+    if (isServiceProvider) {
         headerText = count === 1
-            ? `Company ${centerCompany.name} provides deals to the following 1 client:`
+            ? ' provide services to 1 company:'
             : count === 0
-            ? `Company ${centerCompany.name} provides no deals to clients at the moment`
-            : `Company ${centerCompany.name} provides deals to the following ${count} clients:`;
+            ? ' provide no services at the moment'
+            : ` provide services to ${count} companies:`;
     } else {
         headerText = count === 1
-            ? `Client ${centerCompany.name} receives deals from the following 1 company:`
+            ? ' is served by 1 company:'
             : count === 0
-            ? `Client ${centerCompany.name} receives no deals from companies at the moment`
-            : `Client ${centerCompany.name} receives deals from the following ${count} companies:`;
+            ? ' is not served by any companies at the moment'
+            : ` is served by ${count} companies:`;
     }
+    
     const header = $('<div>')
         .addClass('relationship-header')
-        .text(headerText)
         .css('margin-bottom', '2px')
-        .show();
+        .css('display', 'flex')
+        .css('align-items', 'center')
+        .css('gap', '4px')
+        .show()
+        .append(
+            headerNameSpan,
+            $('<span>').text(headerText)
+        );
+    
     resultsContainer.closest('.search-column').find('.relationship-header').replaceWith(header);
 
-    // Add custom styles for company cards if not already added
+    // Add custom styles for company cards and headers if not already added
     if (!document.getElementById('custom-card-styles')) {
         const style = document.createElement('style');
         style.id = 'custom-card-styles';
         style.textContent = `
+            .relationship-header {
+                font-size: 14px;
+                line-height: 1.4;
+                padding-bottom: 12px;
+                margin-bottom: 12px !important;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            .relationship-header .company-tag {
+                font-size: 7px;
+                padding: 0 4px;
+                border-radius: 3px;
+                text-transform: uppercase;
+                letter-spacing: 0.1px;
+                line-height: 18px;
+                height: 18px;
+                display: inline-flex;
+                align-items: center;
+                white-space: nowrap;
+                vertical-align: middle;
+            }
             .company-card {
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                gap: 8px;
                 padding: 8px;
                 border-radius: 6px;
                 transition: background-color 0.2s;
+                height: auto;
+                min-height: 32px;
+            }
+            .company-card .company-tag {
+                font-size: 7px;
+                padding: 0 4px;
+                border-radius: 3px;
+                text-transform: uppercase;
+                letter-spacing: 0.1px;
+                line-height: 18px;
+                height: 18px;
+                display: flex;
+                align-items: center;
+                white-space: nowrap;
+                margin-right: -2px;
+            }
+            .service-provider-tag {
+                background-color: rgba(37, 99, 235, 0.1);
+                color: #2563eb;
+                border: 1px solid #2563eb;
+            }
+            .client-tag {
+                background-color: rgba(100, 116, 139, 0.1);
+                color: #64748b;
+                border: 1px solid #64748b;
             }
             .company-card:hover {
                 background-color: #f8fafc;
             }
             .company-logo {
-                width: 24px;
-                height: 24px;
-                border-radius: 4px;
+                width: 20px;
+                height: 20px;
+                border-radius: 3px;
                 object-fit: contain;
                 background-color: white;
+                flex-shrink: 0;
+                border: 1px solid #e5e7eb;
             }
             /* Style for card and selection tags */
             .company-card .company-tag,
@@ -430,11 +492,40 @@ async function displayCompanies(data, containerId, type) {
                 flex: 1;
                 min-width: 0;
             }
-            .company-bottom {
+            
+            /* Select2 Dropdown Styles */
+            .select2-result-company {
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                margin-top: 2px;
+                padding: 8px;
+                min-height: 32px;
+            }
+            
+            .select2-result-company .company-tag {
+                font-size: 7px;
+                padding: 0 4px;
+                line-height: 18px;
+                height: 18px;
+                border-radius: 3px;
+                margin-right: -2px;
+            }
+            
+            .select2-result-logo {
+                width: 20px;
+                height: 20px;
+                border-radius: 3px;
+                object-fit: contain;
+                background-color: white;
+                border: 1px solid #e5e7eb;
+                flex-shrink: 0;
+            }
+            
+            .select2-result-company__name {
+                font-size: 14px;
+                flex: 1;
+                line-height: 20px;
+
             }
             .company-name {
                 font-weight: 500;
@@ -463,11 +554,14 @@ async function displayCompanies(data, containerId, type) {
     companies.forEach(company => {
         const card = $('<div>').addClass('company-card');
         
-        // Add tag
-        const tagType = type === 'Clients' ? 'client' : 'vendor';
-        const tagText = tagType === 'vendor' ? 'Service Provider' : 'Client';
-        const tagEl = $(`<span class="company-tag ${tagType}-tag">${tagText}</span>`);
-        card.append(tagEl);
+        // Add type tag
+        const isServiceProvider = type === 'Service Providers';
+        const tagType = isServiceProvider ? 'service-provider-tag' : 'client-tag';
+        const tagText = isServiceProvider ? 'Service Provider' : 'Client';
+        const tag = $('<span>')
+            .addClass(`company-tag ${tagType}`)
+            .text(tagText);
+        card.append(tag);
 
         // Add logo if available
         if (company.logo) {
@@ -542,62 +636,14 @@ $(document).ready(async function() {
     // Initialize the map
     await initializeMap();
 
-    // Add custom styles for Select2 results
-    if (!document.getElementById('select2-custom-styles')) {
-        const style = document.createElement('style');
-        style.id = 'select2-custom-styles';
-        style.textContent = `
-            .select2-result-company {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 4px;
-            }
-            .select2-result-logo {
-                width: 24px;
-                height: 24px;
-                object-fit: contain;
-            }
-            .select2-result-info {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .company-tag {
-                font-size: 11px;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-weight: 500;
-                text-transform: uppercase;
-            }
-            .vendor-tag {
-                background-color: #e0f2fe;
-                color: #0369a1;
-            }
-            .client-tag {
-                background-color: #f0fdf4;
-                color: #166534;
-            }
-            /* Styles for company cards */
-            .company-card-header {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 4px;
-            }
-            .company-card-header h4 {
-                margin: 0;
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
-    // Initialize Select2 for vendor search
-    $('#vendor-search').select2({
-        placeholder: 'Search for a vendor...',
+    // Initialize Select2 for unified company search
+    $('#company-search').select2({
+        placeholder: 'Search for any company...',
+
         allowClear: true,
         ajax: {
-            url: './api/search/vendors',
+            url: './api/search/companies',
             dataType: 'json',
             delay: 250,
             data: function(params) {
@@ -611,42 +657,9 @@ $(document).ready(async function() {
                         return {
                             id: item.name,
                             text: item.name,
-                            logo: item.logo,
-                            type: 'vendor',
-                            tagText: 'Service Provider'
-                        };
-                    })
-                };
-            },
-            cache: true
-        },
-        minimumInputLength: 1,
-        templateResult: formatCompanyResult,
-        templateSelection: formatCompanySelection
-    });
+                            type: item.type, // 'service_provider' or 'client'
+                            logo: item.logo
 
-    // Initialize Select2 for client search
-    $('#client-search').select2({
-        placeholder: 'Search for a client...',
-        allowClear: true,
-        ajax: {
-            url: './api/search/clients',
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return {
-                    q: params.term || ''
-                };
-            },
-            processResults: function(data) {
-                return {
-                    results: data.results.map(function(item) {
-                        return {
-                            id: item.name,
-                            text: item.name,
-                            logo: item.logo,
-                            type: 'client',
-                            tagText: 'Client'
                         };
                     })
                 };
@@ -662,84 +675,62 @@ $(document).ready(async function() {
     function formatCompanyResult(company) {
         if (!company.id) return company.text;
 
-        const $container = $(`
+        const type = company.type === 'service_provider' ? 'Service Provider' : 'Client';
+        const typeClass = company.type === 'service_provider' ? 'service-provider-tag' : 'client-tag';
+        
+        return $(`
             <div class="select2-result-company">
+                <span class="company-tag ${typeClass}">${type}</span>
                 ${company.logo ? `<img src="${company.logo}" class="select2-result-logo" onerror="this.style.display='none'">` : ''}
-                <div class="select2-result-info">
-                    <span>${company.text}</span>
-                    <span class="company-tag ${company.type}-tag">${company.type === 'vendor' ? 'Service Provider' : 'Client'}</span>
-                </div>
+                <span class="select2-result-company__name">${company.text}</span>
             </div>
         `);
-
-        return $container;
     }
 
-    // Format the selected company in the search box
+    // Format the selected company
     function formatCompanySelection(company) {
         if (!company.id) return company.text;
-        
-        const $container = $(`
-            <div class="select2-selection-company">
-                <span class="company-tag ${company.type}-tag">${company.type === 'vendor' ? 'Service Provider' : 'Client'}</span>
-                ${company.logo ? `<img src="${company.logo}" class="select2-selection-logo" onerror="this.style.display='none'">` : ''}
-                <span>${company.text}</span>
-            </div>
-        `);
-        
-        return $container;
+        return company.text;
     }
 
-    // Handle vendor selection
-    $('#vendor-search').on('select2:select', async function(e) {
-        const vendorName = e.params.data.id;
-        console.log('Selected vendor:', vendorName);
-        try {
-            const response = await fetch(`./api/relationships/vendor/${encodeURIComponent(vendorName)}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            console.log('Vendor relationships data:', data);
-            if (data && data.center) {
-                await displayCompanies(data, '#vendor-results', 'Clients');
-            } else {
-                console.log('No relationships found for vendor:', vendorName);
-                displayError('#vendor-results', 'No relationships found for this vendor');
-            }
-        } catch (error) {
-            console.error('Failed to fetch clients:', error);
-            displayError('#vendor-results', 'Failed to fetch client data. Please try again.');
-        }
-    });
+    // Handle company selection
+    $('#company-search').on('select2:select', async function(e) {
+        const companyName = e.params.data.id;
+        const companyType = e.params.data.type;
+        console.log('Selected company:', companyName, 'Type:', companyType);
 
-    // Handle client selection
-    $('#client-search').on('select2:select', async function(e) {
-        const clientName = e.params.data.id;
-        console.log('Selected client:', clientName);
         try {
-            const response = await fetch(`./api/relationships/client/${encodeURIComponent(clientName)}`);
+            const endpoint = companyType === 'service_provider' 
+                ? `./api/relationships/vendor/${encodeURIComponent(companyName)}`
+                : `./api/relationships/client/${encodeURIComponent(companyName)}`;
+
+            const response = await fetch(endpoint);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
+
             const data = await response.json();
-            console.log('Client relationships data:', data);
+            console.log('Company relationships data:', data);
+
             if (data && data.center) {
-                await displayCompanies(data, '#client-results', 'Vendors');
+                const relationType = companyType === 'service_provider' ? 'Clients' : 'Service Providers';
+                await displayCompanies(data, '#company-results', relationType);
             } else {
-                console.log('No relationships found for client:', clientName);
-                displayError('#client-results', 'No relationships found for this client');
+                console.log('No relationships found for company:', companyName);
+                const message = companyType === 'service_provider'
+                    ? 'No client relationships found for this service provider'
+                    : 'No service provider relationships found for this client';
+                displayError('#company-results', message);
             }
         } catch (error) {
-            console.error('Failed to fetch vendors:', error);
-            displayError('#client-results', 'Failed to fetch vendor data. Please try again.');
+            console.error('Failed to fetch relationships:', error);
+            displayError('#company-results', 'Failed to fetch relationship data. Please try again.');
         }
     });
 
     // Handle clear
-    $('#vendor-search, #client-search').on('select2:clear', function() {
-        const resultId = $(this).attr('id') === 'vendor-search' ? '#vendor-results' : '#client-results';
-        $(resultId).empty();
+    $('#company-search').on('select2:clear', function() {
+        $('#company-results').empty();
         clearMap();
     });
 });
