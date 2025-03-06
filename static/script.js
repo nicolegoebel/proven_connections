@@ -383,7 +383,7 @@ async function displayCompanies(data, containerId, type) {
             .company-card {
                 display: flex;
                 align-items: center;
-                gap: 12px;
+                gap: 6px;
                 padding: 8px;
                 border-radius: 6px;
                 transition: background-color 0.2s;
@@ -398,12 +398,43 @@ async function displayCompanies(data, containerId, type) {
                 object-fit: contain;
                 background-color: white;
             }
+            /* Style for card and selection tags */
+            .company-card .company-tag,
+            .select2-selection-company .company-tag {
+                font-size: 8px;
+                padding: 1px 3px;
+                border-radius: 2px;
+                text-transform: uppercase;
+                letter-spacing: 0.2px;
+                line-height: 1.1;
+                height: 12px;
+                display: flex;
+                align-items: center;
+            }
+            .select2-selection-company {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 1px 0;
+            }
+            .select2-selection-logo {
+                width: 16px;
+                height: 16px;
+                object-fit: contain;
+                border-radius: 2px;
+            }
             .company-info {
                 display: flex;
                 flex-direction: column;
                 gap: 2px;
                 flex: 1;
                 min-width: 0;
+            }
+            .company-bottom {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 2px;
             }
             .company-name {
                 font-weight: 500;
@@ -432,6 +463,12 @@ async function displayCompanies(data, containerId, type) {
     companies.forEach(company => {
         const card = $('<div>').addClass('company-card');
         
+        // Add tag
+        const tagType = type === 'Clients' ? 'client' : 'vendor';
+        const tagText = tagType === 'vendor' ? 'Service Provider' : 'Client';
+        const tagEl = $(`<span class="company-tag ${tagType}-tag">${tagText}</span>`);
+        card.append(tagEl);
+
         // Add logo if available
         if (company.logo) {
             const logoImg = $('<img>')
@@ -446,17 +483,21 @@ async function displayCompanies(data, containerId, type) {
 
         // Create info container
         const infoContainer = $('<div>').addClass('company-info');
+        
+        // Add company name
         const nameEl = $('<div>').addClass('company-name').text(company.name);
-        const domainLink = company.domain
-            ? $('<a>')
+        infoContainer.append(nameEl);
+        
+        // Add domain link if available
+        if (company.domain) {
+            const domainLink = $('<a>')
                 .addClass('company-domain')
                 .attr('href', `https://${company.domain}`)
                 .attr('target', '_blank')
-                .text(company.domain)
-            : null;
-
-        infoContainer.append(nameEl);
-        if (domainLink) infoContainer.append(domainLink);
+                .text(company.domain);
+            infoContainer.append(domainLink);
+        }
+        
         card.append(infoContainer);
         resultsWrapper.append(card);
     });
@@ -501,6 +542,56 @@ $(document).ready(async function() {
     // Initialize the map
     await initializeMap();
 
+    // Add custom styles for Select2 results
+    if (!document.getElementById('select2-custom-styles')) {
+        const style = document.createElement('style');
+        style.id = 'select2-custom-styles';
+        style.textContent = `
+            .select2-result-company {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 4px;
+            }
+            .select2-result-logo {
+                width: 24px;
+                height: 24px;
+                object-fit: contain;
+            }
+            .select2-result-info {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .company-tag {
+                font-size: 11px;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-weight: 500;
+                text-transform: uppercase;
+            }
+            .vendor-tag {
+                background-color: #e0f2fe;
+                color: #0369a1;
+            }
+            .client-tag {
+                background-color: #f0fdf4;
+                color: #166534;
+            }
+            /* Styles for company cards */
+            .company-card-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 4px;
+            }
+            .company-card-header h4 {
+                margin: 0;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     // Initialize Select2 for vendor search
     $('#vendor-search').select2({
         placeholder: 'Search for a vendor...',
@@ -519,14 +610,19 @@ $(document).ready(async function() {
                     results: data.results.map(function(item) {
                         return {
                             id: item.name,
-                            text: item.name
+                            text: item.name,
+                            logo: item.logo,
+                            type: 'vendor',
+                            tagText: 'Service Provider'
                         };
                     })
                 };
             },
             cache: true
         },
-        minimumInputLength: 1
+        minimumInputLength: 1,
+        templateResult: formatCompanyResult,
+        templateSelection: formatCompanySelection
     });
 
     // Initialize Select2 for client search
@@ -547,15 +643,52 @@ $(document).ready(async function() {
                     results: data.results.map(function(item) {
                         return {
                             id: item.name,
-                            text: item.name
+                            text: item.name,
+                            logo: item.logo,
+                            type: 'client',
+                            tagText: 'Client'
                         };
                     })
                 };
             },
             cache: true
         },
-        minimumInputLength: 1
+        minimumInputLength: 1,
+        templateResult: formatCompanyResult,
+        templateSelection: formatCompanySelection
     });
+
+    // Format the company result in the dropdown
+    function formatCompanyResult(company) {
+        if (!company.id) return company.text;
+
+        const $container = $(`
+            <div class="select2-result-company">
+                ${company.logo ? `<img src="${company.logo}" class="select2-result-logo" onerror="this.style.display='none'">` : ''}
+                <div class="select2-result-info">
+                    <span>${company.text}</span>
+                    <span class="company-tag ${company.type}-tag">${company.type === 'vendor' ? 'Service Provider' : 'Client'}</span>
+                </div>
+            </div>
+        `);
+
+        return $container;
+    }
+
+    // Format the selected company in the search box
+    function formatCompanySelection(company) {
+        if (!company.id) return company.text;
+        
+        const $container = $(`
+            <div class="select2-selection-company">
+                <span class="company-tag ${company.type}-tag">${company.type === 'vendor' ? 'Service Provider' : 'Client'}</span>
+                ${company.logo ? `<img src="${company.logo}" class="select2-selection-logo" onerror="this.style.display='none'">` : ''}
+                <span>${company.text}</span>
+            </div>
+        `);
+        
+        return $container;
+    }
 
     // Handle vendor selection
     $('#vendor-search').on('select2:select', async function(e) {
