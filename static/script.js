@@ -69,7 +69,7 @@ async function addCompanyToMap(company, isCenter = false) {
     el.className = 'marker';
     el.style.width = `${size}px`;
     el.style.height = `${size}px`;
-    el.style.cursor = 'pointer';
+    el.style.cursor = company.domain ? 'pointer' : 'default';
     el.style.transition = 'all 0.2s ease-in-out';
     el.style.display = 'flex';
     el.style.alignItems = 'center';
@@ -176,6 +176,15 @@ async function addCompanyToMap(company, isCenter = false) {
             </div>
         </div>
     `);
+
+    // Add click handler to open domain in new tab if it exists
+    if (company.domain) {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.open(`https://${company.domain}`, '_blank');
+        });
+    }
 
     // Create marker
     const marker = new mapboxgl.Marker({
