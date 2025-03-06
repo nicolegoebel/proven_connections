@@ -118,13 +118,12 @@
             padding: 16px;
         }
         
-        .search-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+        .search-container {
             margin-top: 16px;
             margin-bottom: 16px;
-            align-items: start;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
         }
         
         .search-column {
@@ -195,6 +194,45 @@
             border-color: #e5e7eb;
             border-radius: 4px;
             padding: 8px;
+        }
+
+        /* Unified search styles */
+        .select2-result-company {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+
+        .select2-result-logo,
+        .select2-selection-logo {
+            width: 16px;
+            height: 16px;
+            object-fit: contain;
+            border-radius: 2px;
+        }
+
+        .select2-result-company__name {
+            flex: 1;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        .select2-selection-company__name {
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        /* Service Provider tag */
+        .service-provider-tag {
+            background-color: #e0f2fe;
+            color: #0369a1;
+        }
+
+        /* Client tag */
+        .client-tag {
+            background-color: #f0fdf4;
+            color: #166534;
         }
 
         .select2-container--default .select2-results__option[aria-selected=true] {
@@ -432,8 +470,8 @@
         }
 
         @media (max-width: 768px) {
-            .search-grid {
-                grid-template-columns: 1fr;
+            .search-container {
+                max-width: 100%;
             }
 
             .map-container {
@@ -446,22 +484,13 @@
     <div class="container">
         <h1 class="main-title">Proven Connections</h1>
         
-        <div class="search-grid">
+        <div class="search-container">
             <div class="search-column">
-                <h2>Search for an Enterprise Ireland Client Company</h2>
-                <select id="vendor-search" class="search-select"></select>
+                <h2>Search for Companies</h2>
+                <select id="company-search" class="search-select"></select>
                 <div class="relationship-header"></div>
                 <div class="search-results-container">
-                    <div id="vendor-results" class="vendor-results"></div>
-                </div>
-            </div>
-            
-            <div class="search-column">
-                <h2>Search for a client's vendors</h2>
-                <select id="client-search" class="search-select"></select>
-                <div class="relationship-header"></div>
-                <div class="search-results-container">
-                    <div id="client-results" class="client-results"></div>
+                    <div id="company-results" class="company-results"></div>
                 </div>
             </div>
         </div>

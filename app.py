@@ -49,10 +49,10 @@ async def get_map_config():
     }
 
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=8002, reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=8004, reload=True)
 
-@app.get("/api/search/vendors")
-async def search_vendors(q: str = ""):
+@app.get("/api/search/companies")
+async def search_companies(q: str = ""):
     if not q:
         return {"results": []}
     
@@ -60,73 +60,57 @@ async def search_vendors(q: str = ""):
         # Search in both name and domain, removing spaces and special characters
         search_term = q.lower().replace(' ', '').replace('-', '').replace('_', '').replace('.', '')
         
-        # Create masks for name and domain matches
-        name_mask = vendor_client_df["vendor_name"].str.lower().str.replace(' ', '').str.replace('-', '').str.replace('_', '').str.contains(search_term, na=False)
+        # Search for vendors
+        vendor_name_mask = vendor_client_df["vendor_name"].str.lower().str.replace(' ', '').str.replace('-', '').str.replace('_', '').str.contains(search_term, na=False)
+        vendor_domains = vendor_client_df["vendor_domain"].str.lower()
+        vendor_domains = vendor_domains.str.replace(r'\.com|\.org|\.net|\.co\.\w+|\.\w+$', '', regex=True)
+        vendor_domains = vendor_domains.str.replace('.', '').str.replace('-', '').str.replace('_', '')
+        vendor_domain_mask = vendor_domains.str.contains(search_term, na=False)
+        vendor_mask = vendor_name_mask | vendor_domain_mask
+        vendor_details = vendor_client_df[vendor_mask].drop_duplicates("vendor_name")
         
-        # Normalize domains by removing common TLDs and special characters for comparison
-        domains = vendor_client_df["vendor_domain"].str.lower()
-        domains = domains.str.replace(r'\.com|\.org|\.net|\.co\.\w+|\.\w+$', '', regex=True)
-        domains = domains.str.replace('.', '').str.replace('-', '').str.replace('_', '')
-        domain_mask = domains.str.contains(search_term, na=False)
+        # Search for clients
+        client_name_mask = vendor_client_df["client_name"].str.lower().str.replace(' ', '').str.replace('-', '').str.replace('_', '').str.contains(search_term, na=False)
+        client_domains = vendor_client_df["client_domain"].str.lower()
+        client_domains = client_domains.str.replace(r'\.com|\.org|\.net|\.co\.\w+|\.\w+$', '', regex=True)
+        client_domains = client_domains.str.replace('.', '').str.replace('-', '').str.replace('_', '')
+        client_domain_mask = client_domains.str.contains(search_term, na=False)
+        client_mask = client_name_mask | client_domain_mask
+        client_details = vendor_client_df[client_mask].drop_duplicates("client_name")
         
-        # Combine masks
-        mask = name_mask | domain_mask
-        vendor_details = vendor_client_df[mask].drop_duplicates("vendor_name")
-        
-        # Convert to list of dicts
-        results = [
+        # Convert vendors to list of dicts
+        vendor_results = [
             {
                 "name": row["vendor_name"],
                 "domain": row["vendor_domain"],
                 "logo": row["vendor_logo"],
                 "latitude": float(row["vendor_lat"]) if pd.notna(row["vendor_lat"]) else None,
-                "longitude": float(row["vendor_lng"]) if pd.notna(row["vendor_lng"]) else None
+                "longitude": float(row["vendor_lng"]) if pd.notna(row["vendor_lng"]) else None,
+                "type": "service_provider"
             }
             for _, row in vendor_details.iterrows()
         ]
         
-        return {"results": results}
-    except Exception as e:
-        print(f"Error in search_vendors: {str(e)}")
-        return {"results": []}
-
-@app.get("/api/search/clients")
-async def search_clients(q: str = ""):
-    if not q:
-        return {"results": []}
-    
-    try:
-        # Search in both name and domain, removing spaces and special characters
-        search_term = q.lower().replace(' ', '').replace('-', '').replace('_', '').replace('.', '')
-        
-        # Create masks for name and domain matches
-        name_mask = vendor_client_df["client_name"].str.lower().str.replace(' ', '').str.replace('-', '').str.replace('_', '').str.contains(search_term, na=False)
-        
-        # Normalize domains by removing common TLDs and special characters for comparison
-        domains = vendor_client_df["client_domain"].str.lower()
-        domains = domains.str.replace(r'\.com|\.org|\.net|\.co\.\w+|\.\w+$', '', regex=True)
-        domains = domains.str.replace('.', '').str.replace('-', '').str.replace('_', '')
-        domain_mask = domains.str.contains(search_term, na=False)
-        
-        # Combine masks
-        mask = name_mask | domain_mask
-        client_details = vendor_client_df[mask].drop_duplicates("client_name")
-        
-        # Convert to list of dicts
-        results = [
+        # Convert clients to list of dicts
+        client_results = [
             {
                 "name": row["client_name"],
                 "domain": row["client_domain"],
                 "logo": row["client_logo"],
                 "latitude": float(row["client_lat"]) if pd.notna(row["client_lat"]) else None,
-                "longitude": float(row["client_lng"]) if pd.notna(row["client_lng"]) else None
+                "longitude": float(row["client_lng"]) if pd.notna(row["client_lng"]) else None,
+                "type": "client"
             }
             for _, row in client_details.iterrows()
         ]
         
-        return {"results": results}
+        # Combine and sort results
+        all_results = vendor_results + client_results
+        all_results.sort(key=lambda x: len(x["name"]))  # Sort by name length to prioritize shorter matches
+        
+        return {"results": all_results}
     except Exception as e:
-        print(f"Error in search_clients: {str(e)}")
+        print(f"Error in search_companies: {str(e)}")
         return {"results": []}
 
 @app.get("/api/relationships/vendor/{vendor_name}")
