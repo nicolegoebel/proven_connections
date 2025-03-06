@@ -63,17 +63,28 @@ async function addCompanyToMap(company, isCenter = false) {
 
     console.log('Adding company to map:', company);
 
+    // Create marker element with fixed dimensions
+    const size = isCenter ? 40 : 32;
     const el = document.createElement('div');
     el.className = 'marker';
-    el.style.width = '32px';
-    el.style.height = '32px';
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
     el.style.cursor = 'pointer';
     el.style.transition = 'all 0.2s ease-in-out';
-
-    // Set base styles
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
     el.style.borderRadius = '50%';
     el.style.border = `3px solid ${isCenter ? '#2563eb' : '#64748b'}`;
     el.style.backgroundColor = isCenter ? '#2563eb' : '#64748b';
+    el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+    el.style.backgroundSize = '75%';
+    el.style.backgroundPosition = 'center';
+    el.style.backgroundRepeat = 'no-repeat';
+    el.style.position = 'absolute';
+    el.style.transform = 'translate(-50%, -50%)';
+
+
     
     // Use logo from API if available
     if (company.logo) {
@@ -85,9 +96,6 @@ async function addCompanyToMap(company, isCenter = false) {
                 img.onload = () => {
                     console.log(`Logo loaded successfully for ${company.name}`, img.width, 'x', img.height);
                     el.style.backgroundImage = `url(${company.logo})`;
-                    el.style.backgroundSize = '75%';
-                    el.style.backgroundPosition = 'center';
-                    el.style.backgroundRepeat = 'no-repeat';
                     el.style.backgroundColor = 'white';
                     resolve();
                 };
@@ -152,11 +160,11 @@ async function addCompanyToMap(company, isCenter = false) {
         document.head.appendChild(style);
     }
 
-    // Create popup
+    // Create popup with offset based on marker size
     const popup = new mapboxgl.Popup({
         closeButton: false,
         closeOnClick: false,
-        offset: 25,
+        offset: [0, -(size/2 + 8)],
         className: 'custom-popup'
     })
     .setHTML(`
@@ -178,14 +186,50 @@ async function addCompanyToMap(company, isCenter = false) {
     .setPopup(popup)
     .addTo(map);
 
-    // Show popup on hover
+    // Add hover effect styles if not already added
+    if (!document.getElementById('marker-hover-styles')) {
+        const style = document.createElement('style');
+        style.id = 'marker-hover-styles';
+        style.textContent = `
+            .marker {
+                position: relative;
+            }
+            .marker::before {
+                content: '';
+                position: absolute;
+                inset: -6px;
+                border-radius: 50%;
+                background: rgba(37, 99, 235, 0.1);
+                opacity: 0;
+                transition: opacity 0.2s ease;
+                pointer-events: none;
+                z-index: -1;
+            }
+            .marker:hover::before {
+                opacity: 1;
+            }
+            .marker {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background-position: center;
+                background-size: 75%;
+                background-repeat: no-repeat;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     el.addEventListener('mouseenter', () => {
         marker.getPopup().addTo(map);
         if (!company.logo) {
             el.style.backgroundColor = isCenter ? '#1d4ed8' : '#475569';
         }
-        el.style.transform = 'scale(1.15)';
-        el.style.zIndex = '2';
         el.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
     });
     
@@ -194,8 +238,6 @@ async function addCompanyToMap(company, isCenter = false) {
         if (!company.logo) {
             el.style.backgroundColor = isCenter ? '#2563eb' : '#64748b';
         }
-        el.style.transform = 'scale(1)';
-        el.style.zIndex = '1';
         el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
     });
 
