@@ -460,6 +460,31 @@ async function displayCompanies(data, containerId, type) {
                 flex-shrink: 0;
                 border: 1px solid #e5e7eb;
             }
+            /* Style for card and selection tags */
+            .company-card .company-tag,
+            .select2-selection-company .company-tag {
+                font-size: 8px;
+                padding: 1px 3px;
+                border-radius: 2px;
+                text-transform: uppercase;
+                letter-spacing: 0.2px;
+                line-height: 1.1;
+                height: 12px;
+                display: flex;
+                align-items: center;
+            }
+            .select2-selection-company {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 1px 0;
+            }
+            .select2-selection-logo {
+                width: 16px;
+                height: 16px;
+                object-fit: contain;
+                border-radius: 2px;
+            }
             .company-info {
                 display: flex;
                 flex-direction: column;
@@ -500,6 +525,7 @@ async function displayCompanies(data, containerId, type) {
                 font-size: 14px;
                 flex: 1;
                 line-height: 20px;
+
             }
             .company-name {
                 font-weight: 500;
@@ -551,17 +577,21 @@ async function displayCompanies(data, containerId, type) {
 
         // Create info container
         const infoContainer = $('<div>').addClass('company-info');
+        
+        // Add company name
         const nameEl = $('<div>').addClass('company-name').text(company.name);
-        const domainLink = company.domain
-            ? $('<a>')
+        infoContainer.append(nameEl);
+        
+        // Add domain link if available
+        if (company.domain) {
+            const domainLink = $('<a>')
                 .addClass('company-domain')
                 .attr('href', `https://${company.domain}`)
                 .attr('target', '_blank')
-                .text(company.domain)
-            : null;
-
-        infoContainer.append(nameEl);
-        if (domainLink) infoContainer.append(domainLink);
+                .text(company.domain);
+            infoContainer.append(domainLink);
+        }
+        
         card.append(infoContainer);
         resultsWrapper.append(card);
     });
@@ -606,9 +636,11 @@ $(document).ready(async function() {
     // Initialize the map
     await initializeMap();
 
+
     // Initialize Select2 for unified company search
     $('#company-search').select2({
         placeholder: 'Search for any company...',
+
         allowClear: true,
         ajax: {
             url: './api/search/companies',
@@ -627,6 +659,7 @@ $(document).ready(async function() {
                             text: item.name,
                             type: item.type, // 'service_provider' or 'client'
                             logo: item.logo
+
                         };
                     })
                 };
