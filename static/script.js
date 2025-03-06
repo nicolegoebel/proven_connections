@@ -6,7 +6,7 @@ let currentConnections = [];
 async function initializeMap() {
     try {
         console.log('Fetching map config...');
-        const response = await fetch('/api/config/map');
+        const response = await fetch('./api/config/map');
         console.log('Map config response:', response);
         const config = await response.json();
         
@@ -433,9 +433,16 @@ async function displayCompanies(data, containerId, type) {
 }
 
 function displayError(containerId, message) {
-    $(containerId).empty().append(
-        `<div class="error-message">${message}</div>`
-    );
+    const header = $('<div>')
+        .addClass('relationship-header')
+        .text(message)
+        .show();
+    $(containerId)
+        .closest('.search-column')
+        .find('.relationship-header')
+        .replaceWith(header);
+    $(containerId).empty();
+    clearMap();
 }
 
 // Initialize when document is ready
@@ -505,6 +512,9 @@ $(document).ready(async function() {
         console.log('Selected vendor:', vendorName);
         try {
             const response = await fetch(`./api/relationships/vendor/${encodeURIComponent(vendorName)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const data = await response.json();
             console.log('Vendor relationships data:', data);
             if (data && data.center) {
@@ -515,7 +525,7 @@ $(document).ready(async function() {
             }
         } catch (error) {
             console.error('Failed to fetch clients:', error);
-            displayError('#vendor-results', 'Failed to fetch clients');
+            displayError('#vendor-results', 'Failed to fetch client data. Please try again.');
         }
     });
 
@@ -525,6 +535,9 @@ $(document).ready(async function() {
         console.log('Selected client:', clientName);
         try {
             const response = await fetch(`./api/relationships/client/${encodeURIComponent(clientName)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const data = await response.json();
             console.log('Client relationships data:', data);
             if (data && data.center) {
@@ -535,7 +548,7 @@ $(document).ready(async function() {
             }
         } catch (error) {
             console.error('Failed to fetch vendors:', error);
-            displayError('#client-results', 'Failed to fetch vendors');
+            displayError('#client-results', 'Failed to fetch vendor data. Please try again.');
         }
     });
 
