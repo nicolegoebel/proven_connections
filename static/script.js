@@ -5,7 +5,9 @@ let currentConnections = [];
 
 async function initializeMap() {
     try {
+        console.log('Fetching map config...');
         const response = await fetch('/api/config/map');
+        console.log('Map config response:', response);
         const config = await response.json();
         
         if (!config.accessToken) {
@@ -50,18 +52,105 @@ function clearMap() {
     currentConnections = [];
 }
 
-function addCompanyToMap(company, isCenter = false) {
+// No longer needed as we get logos from the API
+// Keeping function signature for compatibility
+async function getFaviconUrl(domain) {
+    return null;
+}
+
+async function addCompanyToMap(company, isCenter = false) {
     if (!company.latitude || !company.longitude) return null;
+
+    console.log('Adding company to map:', company);
 
     const el = document.createElement('div');
     el.className = 'marker';
-    el.style.width = '20px';
-    el.style.height = '20px';
-    el.style.borderRadius = '50%';
-    el.style.backgroundColor = isCenter ? '#2563eb' : '#64748b';
-    el.style.border = '3px solid white';
-    el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+    el.style.width = '32px';
+    el.style.height = '32px';
     el.style.cursor = 'pointer';
+    el.style.transition = 'all 0.2s ease-in-out';
+
+    // Set base styles
+    el.style.borderRadius = '50%';
+    el.style.border = `3px solid ${isCenter ? '#2563eb' : '#64748b'}`;
+    el.style.backgroundColor = isCenter ? '#2563eb' : '#64748b';
+    
+    // Use logo from API if available
+    if (company.logo) {
+        console.log(`Attempting to load logo for ${company.name}:`, company.logo);
+        try {
+            // Create a promise to handle image loading
+            await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    console.log(`Logo loaded successfully for ${company.name}`, img.width, 'x', img.height);
+                    el.style.backgroundImage = `url(${company.logo})`;
+                    el.style.backgroundSize = '75%';
+                    el.style.backgroundPosition = 'center';
+                    el.style.backgroundRepeat = 'no-repeat';
+                    el.style.backgroundColor = 'white';
+                    resolve();
+                };
+                img.onerror = (error) => {
+                    console.error(`Failed to load logo for ${company.name}:`, error);
+                    reject(error);
+                };
+                img.src = company.logo;
+            });
+        } catch (error) {
+            console.error(`Error loading logo for ${company.name}:`, error);
+            // Fallback to default marker style
+            el.style.backgroundColor = isCenter ? '#2563eb' : '#64748b';
+        }
+    } else {
+        console.log(`No logo available for ${company.name}`);
+    }
+    
+    el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+
+    // Add custom styles for popups if not already added
+    if (!document.getElementById('custom-popup-styles')) {
+        const style = document.createElement('style');
+        style.id = 'custom-popup-styles';
+        style.textContent = `
+            .mapboxgl-popup-content {
+                padding: 10px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .popup-content {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .popup-logo {
+                width: 24px;
+                height: 24px;
+                object-fit: contain;
+                border-radius: 4px;
+            }
+            .popup-info {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .popup-info h4 {
+                margin: 0;
+                font-size: 14px;
+                font-weight: 600;
+                color: #1a1a1a;
+            }
+            .popup-domain {
+                font-size: 12px;
+                color: #2563eb;
+                text-decoration: none;
+            }
+            .popup-domain:hover {
+                text-decoration: underline;
+            }
+        `;
+        document.head.appendChild(style);
+    }
 
     // Create popup
     const popup = new mapboxgl.Popup({
@@ -72,8 +161,11 @@ function addCompanyToMap(company, isCenter = false) {
     })
     .setHTML(`
         <div class="popup-content">
-            <h4>${company.name}</h4>
-            ${company.domain ? `<a href="https://${company.domain}" target="_blank" class="popup-domain">${company.domain}</a>` : ''}
+            ${company.logo ? `<img src="${company.logo}" alt="${company.name} logo" class="popup-logo" onerror="this.style.display='none'">` : ''}
+            <div class="popup-info">
+                <h4>${company.name}</h4>
+                ${company.domain ? `<a href="https://${company.domain}" target="_blank" class="popup-domain">${company.domain}</a>` : ''}
+            </div>
         </div>
     `);
 
@@ -89,12 +181,22 @@ function addCompanyToMap(company, isCenter = false) {
     // Show popup on hover
     el.addEventListener('mouseenter', () => {
         marker.getPopup().addTo(map);
-        el.style.backgroundColor = isCenter ? '#1d4ed8' : '#475569';
+        if (!company.logo) {
+            el.style.backgroundColor = isCenter ? '#1d4ed8' : '#475569';
+        }
+        el.style.transform = 'scale(1.15)';
+        el.style.zIndex = '2';
+        el.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
     });
     
     el.addEventListener('mouseleave', () => {
         marker.getPopup().remove();
-        el.style.backgroundColor = isCenter ? '#2563eb' : '#64748b';
+        if (!company.logo) {
+            el.style.backgroundColor = isCenter ? '#2563eb' : '#64748b';
+        }
+        el.style.transform = 'scale(1)';
+        el.style.zIndex = '1';
+        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
     });
 
     currentMarkers.push(marker);
@@ -175,14 +277,23 @@ function updateMapView(companies) {
     });
 }
 
-function displayCompanies(data, containerId, type) {
+async function displayCompanies(data, containerId, type) {
+    console.log('Displaying companies:', { data, containerId, type });
     const resultsContainer = $(containerId).empty();
     
     if (!data || !data.center || !data.related || data.related.length === 0) {
-        resultsContainer.append(`<p>No ${type.toLowerCase()} found.</p>`);
+        console.log('No data to display:', { data });
+        const header = $('<div>').addClass('relationship-header')
+            .text(`No ${type.toLowerCase()} found for ${data?.center?.name || 'this company'}.`)
+            .show();
+        resultsContainer.closest('.search-column').find('.relationship-header').replaceWith(header);
+        resultsContainer.empty();
         clearMap();
         return;
     }
+
+    console.log('Center company:', data.center);
+    console.log('Related companies:', data.related);
 
     // Clear previous markers and connections
     clearMap();
@@ -206,37 +317,116 @@ function displayCompanies(data, containerId, type) {
             ? `Client ${centerCompany.name} receives no deals from companies at the moment`
             : `Client ${centerCompany.name} receives deals from the following ${count} companies:`;
     }
-    resultsContainer.append(`<h3>${headerText}</h3>`);
+    const header = $('<div>')
+        .addClass('relationship-header')
+        .text(headerText)
+        .css('margin-bottom', '2px')
+        .show();
+    resultsContainer.closest('.search-column').find('.relationship-header').replaceWith(header);
+
+    // Add custom styles for company cards if not already added
+    if (!document.getElementById('custom-card-styles')) {
+        const style = document.createElement('style');
+        style.id = 'custom-card-styles';
+        style.textContent = `
+            .company-card {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 8px;
+                border-radius: 6px;
+                transition: background-color 0.2s;
+            }
+            .company-card:hover {
+                background-color: #f8fafc;
+            }
+            .company-logo {
+                width: 24px;
+                height: 24px;
+                border-radius: 4px;
+                object-fit: contain;
+                background-color: white;
+            }
+            .company-info {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                flex: 1;
+                min-width: 0;
+            }
+            .company-name {
+                font-weight: 500;
+                color: #1a1a1a;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .company-domain {
+                font-size: 12px;
+                color: #2563eb;
+                text-decoration: none;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .company-domain:hover {
+                text-decoration: underline;
+            }
+        `;
+        document.head.appendChild(style);
+    }
 
     // Create cards for each company
+    const resultsWrapper = $('<div>').addClass(type.toLowerCase() === 'clients' ? 'vendor-results' : 'client-results');
     companies.forEach(company => {
         const card = $('<div>').addClass('company-card');
-        const nameEl = $('<h4>').text(company.name);
-        card.append(nameEl);
+        
+        // Add logo if available
+        if (company.logo) {
+            const logoImg = $('<img>')
+                .addClass('company-logo')
+                .attr('src', company.logo)
+                .attr('alt', `${company.name} logo`)
+                .on('error', function() {
+                    $(this).hide();
+                });
+            card.append(logoImg);
+        }
 
-        if (company.domain) {
-            const domainLink = $('<a>')
+        // Create info container
+        const infoContainer = $('<div>').addClass('company-info');
+        const nameEl = $('<div>').addClass('company-name').text(company.name);
+        const domainLink = company.domain
+            ? $('<a>')
                 .addClass('company-domain')
                 .attr('href', `https://${company.domain}`)
                 .attr('target', '_blank')
-                .text(company.domain);
-            card.append(domainLink);
-        }
+                .text(company.domain)
+            : null;
 
-        resultsContainer.append(card);
+        infoContainer.append(nameEl);
+        if (domainLink) infoContainer.append(domainLink);
+        card.append(infoContainer);
+        resultsWrapper.append(card);
     });
+    resultsContainer.empty().append(resultsWrapper);
 
     // Update map
+    console.log('Updating map with companies...');
     clearMap();
-    const centerMarker = addCompanyToMap(centerCompany, true);
+    console.log('Adding center company marker:', centerCompany);
+    const centerMarker = await addCompanyToMap(centerCompany, true);
 
     // Add company markers and connections
-    companies.forEach((company, index) => {
-        const marker = addCompanyToMap(company);
+    for (let i = 0; i < companies.length; i++) {
+        const company = companies[i];
+        console.log(`Adding related company marker ${i + 1}/${companies.length}:`, company);
+        const marker = await addCompanyToMap(company);
         if (marker && centerMarker) {
-            drawConnection(centerCompany, company, index);
+            console.log(`Drawing connection ${i + 1}/${companies.length}`);
+            drawConnection(centerCompany, company, i);
         }
-    });
+    }
 
     // Update map view
     updateMapView([centerCompany, ...companies]);
@@ -258,7 +448,7 @@ $(document).ready(async function() {
         placeholder: 'Search for a vendor...',
         allowClear: true,
         ajax: {
-            url: '/api/search/vendors',
+            url: './api/search/vendors',
             dataType: 'json',
             delay: 250,
             data: function(params) {
@@ -286,7 +476,7 @@ $(document).ready(async function() {
         placeholder: 'Search for a client...',
         allowClear: true,
         ajax: {
-            url: '/api/search/clients',
+            url: './api/search/clients',
             dataType: 'json',
             delay: 250,
             data: function(params) {
@@ -310,37 +500,43 @@ $(document).ready(async function() {
     });
 
     // Handle vendor selection
-    $('#vendor-search').on('select2:select', function(e) {
+    $('#vendor-search').on('select2:select', async function(e) {
         const vendorName = e.params.data.id;
-        $.get(`/api/relationships/vendor/${encodeURIComponent(vendorName)}`)
-            .done(function(data) {
-                if (data && data.center) {
-                    displayCompanies(data, '#vendor-results', 'Clients');
-                } else {
-                    displayError('#vendor-results', 'No relationships found for this vendor');
-                }
-            })
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                console.error('Failed to fetch clients:', errorThrown);
-                displayError('#vendor-results', 'Failed to fetch clients');
-            });
+        console.log('Selected vendor:', vendorName);
+        try {
+            const response = await fetch(`./api/relationships/vendor/${encodeURIComponent(vendorName)}`);
+            const data = await response.json();
+            console.log('Vendor relationships data:', data);
+            if (data && data.center) {
+                await displayCompanies(data, '#vendor-results', 'Clients');
+            } else {
+                console.log('No relationships found for vendor:', vendorName);
+                displayError('#vendor-results', 'No relationships found for this vendor');
+            }
+        } catch (error) {
+            console.error('Failed to fetch clients:', error);
+            displayError('#vendor-results', 'Failed to fetch clients');
+        }
     });
 
     // Handle client selection
-    $('#client-search').on('select2:select', function(e) {
+    $('#client-search').on('select2:select', async function(e) {
         const clientName = e.params.data.id;
-        $.get(`/api/relationships/client/${encodeURIComponent(clientName)}`)
-            .done(function(data) {
-                if (data && data.center) {
-                    displayCompanies(data, '#client-results', 'Vendors');
-                } else {
-                    displayError('#client-results', 'No relationships found for this client');
-                }
-            })
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                console.error('Failed to fetch vendors:', errorThrown);
-                displayError('#client-results', 'Failed to fetch vendors');
-            });
+        console.log('Selected client:', clientName);
+        try {
+            const response = await fetch(`./api/relationships/client/${encodeURIComponent(clientName)}`);
+            const data = await response.json();
+            console.log('Client relationships data:', data);
+            if (data && data.center) {
+                await displayCompanies(data, '#client-results', 'Vendors');
+            } else {
+                console.log('No relationships found for client:', clientName);
+                displayError('#client-results', 'No relationships found for this client');
+            }
+        } catch (error) {
+            console.error('Failed to fetch vendors:', error);
+            displayError('#client-results', 'Failed to fetch vendors');
+        }
     });
 
     // Handle clear

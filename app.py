@@ -66,6 +66,7 @@ async def search_vendors(q: str = ""):
             {
                 "name": row["vendor_name"],
                 "domain": row["vendor_domain"],
+                "logo": row["vendor_logo"],
                 "latitude": float(row["vendor_lat"]) if pd.notna(row["vendor_lat"]) else None,
                 "longitude": float(row["vendor_lng"]) if pd.notna(row["vendor_lng"]) else None
             }
@@ -92,6 +93,7 @@ async def search_clients(q: str = ""):
             {
                 "name": row["client_name"],
                 "domain": row["client_domain"],
+                "logo": row["client_logo"],
                 "latitude": float(row["client_lat"]) if pd.notna(row["client_lat"]) else None,
                 "longitude": float(row["client_lng"]) if pd.notna(row["client_lng"]) else None
             }
@@ -121,6 +123,7 @@ async def get_vendor_relationships(vendor_name: str):
         vendor = {
             "name": vendor_name,
             "domain": vendor_row["vendor_domain"],
+            "logo": vendor_row["vendor_logo"],
             "latitude": float(vendor_row["vendor_lat"]) if pd.notna(vendor_row["vendor_lat"]) else None,
             "longitude": float(vendor_row["vendor_lng"]) if pd.notna(vendor_row["vendor_lng"]) else None
         }
@@ -130,6 +133,7 @@ async def get_vendor_relationships(vendor_name: str):
             {
                 "name": row["client_name"],
                 "domain": row["client_domain"],
+                "logo": row["client_logo"],
                 "latitude": float(row["client_lat"]) if pd.notna(row["client_lat"]) else None,
                 "longitude": float(row["client_lng"]) if pd.notna(row["client_lng"]) else None
             }
@@ -162,6 +166,7 @@ async def get_client_relationships(client_name: str):
         client = {
             "name": client_name,
             "domain": client_row["client_domain"],
+            "logo": client_row["client_logo"],
             "latitude": float(client_row["client_lat"]) if pd.notna(client_row["client_lat"]) else None,
             "longitude": float(client_row["client_lng"]) if pd.notna(client_row["client_lng"]) else None
         }
@@ -172,6 +177,7 @@ async def get_client_relationships(client_name: str):
             vendors.append({
                 "name": row["vendor_name"],
                 "domain": row["vendor_domain"],
+                "logo": row["vendor_logo"],
                 "latitude": float(row["vendor_lat"]) if pd.notna(row["vendor_lat"]) else None,
                 "longitude": float(row["vendor_lng"]) if pd.notna(row["vendor_lng"]) else None
             })
