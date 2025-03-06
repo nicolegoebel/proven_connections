@@ -20,50 +20,63 @@
         /* Base styles */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.5;
+            line-height: 1;
             margin: 0;
-            padding: 20px;
+            padding: 16px;
             background-color: #f9fafb;
         }
 
         .company-card {
-            margin-bottom: 10px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 12px;
+            margin: 0;
+            border-bottom: 0.25px solid #e5e7eb;
+            padding: 0 4px;
             background-color: white;
-            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: .4cm;
+            line-height: 1;
+            height: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .company-card:hover {
-            border-color: #2563eb;
-            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+            border-bottom-color: #2563eb;
+            background-color: #f8fafc;
         }
 
         .company-name {
             font-weight: 600;
             color: #1e293b;
-            margin-bottom: 4px;
+            margin-bottom: 0;
+            font-size: 0.85em;
+            width: 250px;
+            flex-shrink: 0;
         }
+
 
         .search-column {
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 10px;
+            margin-bottom: 5px;
         }
 
         .vendor-results, .client-results {
-            margin-top: 20px;
+            margin: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 9px;
         }
 
         .company-domain {
             color: #4b5563;
-            font-size: 0.9em;
+            font-size: 0.75em;
             text-decoration: none;
+            display: inline-block;
         }
 
         .company-domain:hover {
@@ -102,41 +115,43 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 16px;
         }
         
         .search-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-top: 20px;
-            margin-bottom: 20px;
+            gap: 20px;
+            margin-top: 16px;
+            margin-bottom: 16px;
         }
         
         .search-column {
             background: white;
-            padding: 20px;
+            padding: 12px;
             border-radius: 8px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            height: 400px;
+            gap: 8px;
+            height: 350px;
         }
 
         .search-column h2 {
             margin: 0;
             color: #1e40af;
-            font-size: 1.25rem;
+            font-size: 1.1rem;
         }
 
         .relationship-header {
-            color: #4b5563;
-            font-size: 0.9rem;
-            margin: 10px 0;
-            padding: 8px 0;
+            color: #1e293b;
+            font-size: 1rem;
+            margin: 30px 0 20px 0;
+            padding: 0 0 10px 0;
             border-bottom: 1px solid #e5e7eb;
             display: none; /* Initially hidden until results are loaded */
+            line-height: 1.4;
+            font-weight: 500;
         }
 
         /* Select2 Styles */
@@ -186,19 +201,19 @@
         .search-results-container {
             overflow-y: auto;
             flex-grow: 1;
+            margin-top: 0;
         }
 
-        .vendor-results, .client-results {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+        .main-title {
+            color: #2563eb;
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 2rem;
         }
 
-        .company-card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 12px;
+        #map {
+            border: 1px solid #e5e7eb;
+        }
             transition: all 0.2s;
         }
 
