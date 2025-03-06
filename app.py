@@ -57,8 +57,20 @@ async def search_vendors(q: str = ""):
         return {"results": []}
     
     try:
-        # Get unique vendors and their details from relationships
-        mask = vendor_client_df["vendor_name"].str.contains(q, case=False, na=False)
+        # Search in both name and domain, removing spaces and special characters
+        search_term = q.lower().replace(' ', '').replace('-', '').replace('_', '').replace('.', '')
+        
+        # Create masks for name and domain matches
+        name_mask = vendor_client_df["vendor_name"].str.lower().str.replace(' ', '').str.replace('-', '').str.replace('_', '').str.contains(search_term, na=False)
+        
+        # Normalize domains by removing common TLDs and special characters for comparison
+        domains = vendor_client_df["vendor_domain"].str.lower()
+        domains = domains.str.replace(r'\.com|\.org|\.net|\.co\.\w+|\.\w+$', '', regex=True)
+        domains = domains.str.replace('.', '').str.replace('-', '').str.replace('_', '')
+        domain_mask = domains.str.contains(search_term, na=False)
+        
+        # Combine masks
+        mask = name_mask | domain_mask
         vendor_details = vendor_client_df[mask].drop_duplicates("vendor_name")
         
         # Convert to list of dicts
@@ -84,8 +96,20 @@ async def search_clients(q: str = ""):
         return {"results": []}
     
     try:
-        # Get unique clients and their details from relationships
-        mask = vendor_client_df["client_name"].str.contains(q, case=False, na=False)
+        # Search in both name and domain, removing spaces and special characters
+        search_term = q.lower().replace(' ', '').replace('-', '').replace('_', '').replace('.', '')
+        
+        # Create masks for name and domain matches
+        name_mask = vendor_client_df["client_name"].str.lower().str.replace(' ', '').str.replace('-', '').str.replace('_', '').str.contains(search_term, na=False)
+        
+        # Normalize domains by removing common TLDs and special characters for comparison
+        domains = vendor_client_df["client_domain"].str.lower()
+        domains = domains.str.replace(r'\.com|\.org|\.net|\.co\.\w+|\.\w+$', '', regex=True)
+        domains = domains.str.replace('.', '').str.replace('-', '').str.replace('_', '')
+        domain_mask = domains.str.contains(search_term, na=False)
+        
+        # Combine masks
+        mask = name_mask | domain_mask
         client_details = vendor_client_df[mask].drop_duplicates("client_name")
         
         # Convert to list of dicts
