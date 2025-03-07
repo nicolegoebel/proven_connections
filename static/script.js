@@ -356,7 +356,7 @@ async function displayCompanies(data, containerId, type) {
     const count = companies.length;
     const isServiceProvider = type === 'Clients';
     
-    // Create header with company name and text
+    // Create header with relationship text
     let headerText;
     if (isServiceProvider) {
         headerText = count === 1
@@ -379,9 +379,9 @@ async function displayCompanies(data, containerId, type) {
             'display': 'flex',
             'align-items': 'center'
         });
-    
+
     const textSpan = $('<span>').text(' ' + headerText);
-    
+
     header.append(textSpan);
     
     resultsContainer.closest('.search-column').find('.relationship-header').replaceWith(header);
