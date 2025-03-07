@@ -360,33 +360,29 @@ async function displayCompanies(data, containerId, type) {
     let headerText;
     if (isServiceProvider) {
         headerText = count === 1
-            ? 'provides services to the following client:'
+            ? `${centerCompany.name} provides services to the following client:`
             : count === 0
-            ? 'provides no services to clients at the moment'
-            : `provides services to the following ${count} clients:`;
+            ? `${centerCompany.name} provides no services to clients at the moment`
+            : `${centerCompany.name} provides services to the following ${count} clients:`;
     } else {
         headerText = count === 1
-            ? 'is a client of the following company:'
+            ? `${centerCompany.name} is a client of the following company:`
             : count === 0
-            ? 'is not a client of any companies at the moment'
-            : `is a client of the following ${count} companies:`;
+            ? `${centerCompany.name} is not a client of any companies at the moment`
+            : `${centerCompany.name} is a client of the following ${count} companies:`;
     }
     
     const header = $('<div>')
         .addClass('relationship-header')
-        .css('margin-bottom', '2px')
-        .css('display', 'flex')
-        .css('align-items', 'center')
-        .show();
+        .css({
+            'margin-bottom': '2px',
+            'display': 'flex',
+            'align-items': 'center'
+        });
     
-    const nameSpan = $('<span>')
-        .text(centerCompany.name)
-        .css('font-weight', '600');
-
-    const textSpan = $('<span>')
-        .text(' ' + headerText);
+    const textSpan = $('<span>').text(' ' + headerText);
     
-    header.append(nameSpan, textSpan);
+    header.append(textSpan);
     
     resultsContainer.closest('.search-column').find('.relationship-header').replaceWith(header);
 
