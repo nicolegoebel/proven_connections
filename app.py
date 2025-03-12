@@ -25,11 +25,9 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Load data
-vendor_client_df = pd.read_csv("data/vendor_client_relationships.csv")
-vendor_details_df = pd.read_csv("data/vendor_details.csv")
-
-# Normalize column names in vendor_details_df
-vendor_details_df.columns = vendor_details_df.columns.str.lower()
+csv_path = "data/vendor_client_relationships_11Mar2025.csv"
+print(f"Loading relationship data from: {csv_path}")
+vendor_client_df = pd.read_csv(csv_path)
 
 @app.get("/")
 async def read_root():
@@ -113,8 +111,9 @@ async def search_companies(q: str = ""):
         print(f"Error in search_companies: {str(e)}")
         return {"results": []}
 
-@app.get("/api/relationships/vendor/{vendor_name}")
-async def get_vendor_relationships(vendor_name: str):
+@app.get("/api/vendor/{vendor_name}/clients")
+async def get_vendor_clients(vendor_name: str, include_stats: bool = False):
+    """Get all clients for a specific vendor with optional statistics."""
     try:
         # Get all clients for this vendor
         relationships = vendor_client_df[
@@ -122,7 +121,7 @@ async def get_vendor_relationships(vendor_name: str):
         ]
         
         if relationships.empty:
-            return {"center": None, "related": []}
+            raise HTTPException(status_code=404, detail="Vendor not found")
         
         # Get first relationship for vendor details
         vendor_row = relationships.iloc[0]
@@ -133,7 +132,8 @@ async def get_vendor_relationships(vendor_name: str):
             "domain": vendor_row["vendor_domain"],
             "logo": vendor_row["vendor_logo"],
             "latitude": float(vendor_row["vendor_lat"]) if pd.notna(vendor_row["vendor_lat"]) else None,
-            "longitude": float(vendor_row["vendor_lng"]) if pd.notna(vendor_row["vendor_lng"]) else None
+            "longitude": float(vendor_row["vendor_lng"]) if pd.notna(vendor_row["vendor_lng"]) else None,
+            "type": "service_provider"
         }
         
         # Get all related clients
@@ -143,21 +143,32 @@ async def get_vendor_relationships(vendor_name: str):
                 "domain": row["client_domain"],
                 "logo": row["client_logo"],
                 "latitude": float(row["client_lat"]) if pd.notna(row["client_lat"]) else None,
-                "longitude": float(row["client_lng"]) if pd.notna(row["client_lng"]) else None
+                "longitude": float(row["client_lng"]) if pd.notna(row["client_lng"]) else None,
+                "type": "client"
             }
             for _, row in relationships.iterrows()
         ]
         
-        return {
+        response = {
             "center": vendor,
-            "related": clients
+            "related": clients,
+            "total_count": len(clients)
         }
+        
+        if include_stats:
+            response["stats"] = {
+                "with_location": sum(1 for c in clients if c["latitude"] and c["longitude"]),
+                "with_logo": sum(1 for c in clients if c["logo"])
+            }
+        
+        return response
     except Exception as e:
         print(f"Error in get_vendor_relationships: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/relationships/client/{client_name}")
-async def get_client_relationships(client_name: str):
+@app.get("/api/client/{client_name}/vendors")
+async def get_client_vendors(client_name: str, include_stats: bool = False):
+    """Get all vendors for a specific client with optional statistics."""
     try:
         # Get all vendors for this client
         relationships = vendor_client_df[
@@ -165,7 +176,7 @@ async def get_client_relationships(client_name: str):
         ]
         
         if relationships.empty:
-            return {"center": None, "related": []}
+            raise HTTPException(status_code=404, detail="Client not found")
         
         # Get first relationship for client details
         client_row = relationships.iloc[0]
@@ -176,24 +187,36 @@ async def get_client_relationships(client_name: str):
             "domain": client_row["client_domain"],
             "logo": client_row["client_logo"],
             "latitude": float(client_row["client_lat"]) if pd.notna(client_row["client_lat"]) else None,
-            "longitude": float(client_row["client_lng"]) if pd.notna(client_row["client_lng"]) else None
+            "longitude": float(client_row["client_lng"]) if pd.notna(client_row["client_lng"]) else None,
+            "type": "client"
         }
         
         # Get all related vendors
-        vendors = []
-        for _, row in relationships.iterrows():
-            vendors.append({
+        vendors = [
+            {
                 "name": row["vendor_name"],
                 "domain": row["vendor_domain"],
                 "logo": row["vendor_logo"],
                 "latitude": float(row["vendor_lat"]) if pd.notna(row["vendor_lat"]) else None,
-                "longitude": float(row["vendor_lng"]) if pd.notna(row["vendor_lng"]) else None
-            })
+                "longitude": float(row["vendor_lng"]) if pd.notna(row["vendor_lng"]) else None,
+                "type": "service_provider"
+            }
+            for _, row in relationships.iterrows()
+        ]
         
-        return {
+        response = {
             "center": client,
-            "related": vendors
+            "related": vendors,
+            "total_count": len(vendors)
         }
+        
+        if include_stats:
+            response["stats"] = {
+                "with_location": sum(1 for v in vendors if v["latitude"] and v["longitude"]),
+                "with_logo": sum(1 for v in vendors if v["logo"])
+            }
+        
+        return response
     except Exception as e:
         print(f"Error in get_client_relationships: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
