@@ -45,31 +45,15 @@ def get_company_info_by_domain(domain: str, max_retries: int = 3) -> Optional[Di
     print(f"Max retries reached for {domain}")
     return None
 
-def parse_client_list(clients_str: str) -> List[Dict[str, str]]:
-    """Parse a string of clients into a list of client dictionaries with name and domain."""
+def parse_client_list(clients_str: str) -> List[str]:
+    """Parse a string of client domains into a list of domains."""
     if not pd.notna(clients_str):
         return []
 
-    clients = []
-    # Split by comma and handle each client separately
-    parts = [p.strip() for p in clients_str.split(',')]
-    
-    for part in parts:
-        # Extract name and domain from format: 'Name (domain.com)'
-        name = domain = None
-        if '(' in part and ')' in part:
-            name = part[:part.find('(')].strip()
-            domain = part[part.find('(')+1:part.find(')')].strip()
-        else:
-            name = part.strip()
-        
-        if name:  # Only add if we at least have a name
-            clients.append({
-                'name': name,
-                'domain': domain
-            })
-    
-    return clients
+    # Split by comma and clean each domain
+    domains = [domain.strip() for domain in clients_str.split(',')]
+    # Filter out empty domains
+    return [domain for domain in domains if domain]
 
 def process_company_relationships(row: pd.Series) -> List[Dict[str, Any]]:
     """Process vendor and client relationships with full company information."""
@@ -77,13 +61,14 @@ def process_company_relationships(row: pd.Series) -> List[Dict[str, Any]]:
     
     # Get vendor information first
     vendor_info = None
-    if pd.notna(row['DOMAIN']):
-        print(f"Processing vendor: {row['NAME']} ({row['DOMAIN']})")
-        vendor_info = get_company_info_by_domain(row['DOMAIN'])
+    vendor_domain = row['Vendor Domain']
+    if pd.notna(vendor_domain):
+        print(f"Processing vendor: {row['Vendor Name']} ({vendor_domain})")
+        vendor_info = get_company_info_by_domain(vendor_domain)
         if not vendor_info:
             vendor_info = {
-                'name': row['NAME'],
-                'domain': row['DOMAIN'],
+                'name': row['Vendor Name'],
+                'domain': vendor_domain,
                 'logo': None,
                 'lat': None,
                 'lng': None
@@ -93,36 +78,35 @@ def process_company_relationships(row: pd.Series) -> List[Dict[str, Any]]:
         return relationships
     
     # Process each client in the list
-    clients = parse_client_list(row['CLIENTS'])
-    for client in clients:
-        if client['domain']:
-            print(f"  Processing client: {client['name']} ({client['domain']})")
-            time.sleep(0.5)  # Rate limiting
-            client_info = get_company_info_by_domain(client['domain'])
-            
-            if not client_info:
-                client_info = {
-                    'name': client['name'],
-                    'domain': client['domain'],
-                    'logo': None,
-                    'lat': None,
-                    'lng': None
-                }
-            
-            # Create relationship record
-            relationship = {
-                'vendor_name': vendor_info['name'],
-                'vendor_domain': vendor_info['domain'],
-                'vendor_logo': vendor_info['logo'],
-                'vendor_lat': vendor_info['lat'],
-                'vendor_lng': vendor_info['lng'],
-                'client_name': client_info['name'],
-                'client_domain': client_info['domain'],
-                'client_logo': client_info['logo'],
-                'client_lat': client_info['lat'],
-                'client_lng': client_info['lng']
+    client_domains = parse_client_list(row['Vendor clients domains'])
+    for client_domain in client_domains:
+        print(f"  Processing client domain: {client_domain}")
+        time.sleep(0.5)  # Rate limiting
+        client_info = get_company_info_by_domain(client_domain)
+        
+        if not client_info:
+            client_info = {
+                'name': client_domain.split('.')[0].title(),  # Use domain name as company name
+                'domain': client_domain,
+                'logo': None,
+                'lat': None,
+                'lng': None
             }
-            relationships.append(relationship)
+        
+        # Create relationship record
+        relationship = {
+            'vendor_name': vendor_info['name'],
+            'vendor_domain': vendor_info['domain'],
+            'vendor_logo': vendor_info['logo'],
+            'vendor_lat': vendor_info['lat'],
+            'vendor_lng': vendor_info['lng'],
+            'client_name': client_info['name'],
+            'client_domain': client_info['domain'],
+            'client_logo': client_info['logo'],
+            'client_lat': client_info['lat'],
+            'client_lng': client_info['lng']
+        }
+        relationships.append(relationship)
     
     return relationships
 
@@ -179,5 +163,5 @@ def process_vendor_data(csv_path: str):
 if __name__ == "__main__":
     # Get the absolute path to the data directory
     current_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    csv_path = os.path.join(current_dir, 'data', 'vendor_details.csv')
+    csv_path = os.path.join(current_dir, 'data', 'vendors_3Mar2025.csv')
     process_vendor_data(csv_path)
