@@ -240,7 +240,7 @@ def update_company_info(df: pd.DataFrame) -> pd.DataFrame:
 if __name__ == "__main__":
     # Get the absolute path to the data directory
     current_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    input_file = 'vendor_client_relationships_10Mar2025.csv'
+    input_file = 'vendor_client_relationships_11Mar2025.csv'
     input_path = os.path.join(current_dir, 'data', input_file)
     
     # Read the relationships file
