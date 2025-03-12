@@ -103,6 +103,13 @@ def search_company_domain(company_name: str) -> Optional[str]:
     
     return None
 
+def get_corrected_company_name(name: str) -> str:
+    """Apply known corrections to company names."""
+    corrections = {
+        'Brownthomas': 'Brown Thomas',  # Fix typo in company name
+    }
+    return corrections.get(name, name)
+
 def update_company_info(df: pd.DataFrame) -> pd.DataFrame:
     """Update missing company information in the relationships DataFrame."""
     print("\n=== Starting Company Information Update ===")
@@ -110,6 +117,11 @@ def update_company_info(df: pd.DataFrame) -> pd.DataFrame:
     
     # Create a copy of the DataFrame
     updated_df = df.copy()
+    
+    # Apply known company name corrections
+    print("\nApplying known company name corrections...")
+    updated_df['client_name'] = updated_df['client_name'].apply(get_corrected_company_name)
+    updated_df['vendor_name'] = updated_df['vendor_name'].apply(get_corrected_company_name)
     
     # First, try to find domains for entries with only company names
     print("Looking up domains for companies without domains...")
