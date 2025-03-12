@@ -131,6 +131,7 @@
             gap: 24px;
             margin-top: 24px;
             align-items: start;
+            min-height: calc(100vh - 120px);
         }
         
         .search-column {
@@ -454,6 +455,7 @@
             position: sticky;
             top: 24px;
             background: white;
+            display: block;
         }
 
         .mapboxgl-popup {
@@ -512,7 +514,9 @@
             </div>
             
             <!-- Map container -->
-            <div id="map" class="map-container"></div>
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
         </div>
     </div>
     

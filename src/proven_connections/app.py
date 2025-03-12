@@ -6,8 +6,12 @@ from fastapi.middleware.gzip import GZipMiddleware
 from typing import Optional, List, Dict, Any
 import os
 import json
+import logging
 from proven_connections.search import RelationshipSearch
 from proven_connections.config import MAPBOX_ACCESS_TOKEN, DEFAULT_MAP_STYLE, DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Proven Connections Search")
 
@@ -25,9 +29,10 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Get the absolute path to the data directory
 current_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-csv_path = os.path.join(current_dir, 'data', 'vendor_client_relationships.csv')
+csv_path = os.path.join(current_dir, 'data', 'vendor_client_relationships_11Mar2025.csv')
 
 # Initialize the search
+logging.info(f"Loading relationship data from: {csv_path}")
 search = RelationshipSearch(csv_path)
 
 # Mount the static files directory
