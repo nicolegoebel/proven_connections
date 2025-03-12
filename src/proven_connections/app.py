@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from typing import Optional, List, Dict, Any
@@ -53,33 +53,42 @@ async def get_map_config():
         "zoom": DEFAULT_MAP_ZOOM
     }
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def read_root():
     """Serve the main HTML page."""
-    with open(os.path.join(static_dir, 'index.html'), 'r') as f:
-        return f.read()
+    return FileResponse(os.path.join(static_dir, 'index.html'))
 
-@app.get("/api/search/vendors")
-async def search_vendors(q: str, limit: Optional[int] = 10):
-    """Search for vendors by name prefix with caching."""
-    cache_key = f"vendor_search_{q}_{limit}"
-    if cache_key in vendor_cache:
-        return vendor_cache[cache_key]
+@app.get("/api/search/companies")
+async def search_companies(q: str = ""):
+    """Search for both vendors and clients with unified results."""
+    if not q:
+        return {"results": []}
     
-    results = search.search_vendors(q, limit)
-    vendor_cache[cache_key] = results
-    return results
-
-@app.get("/api/search/clients")
-async def search_clients(q: str, limit: Optional[int] = 10):
-    """Search for clients by name prefix with caching."""
-    cache_key = f"client_search_{q}_{limit}"
-    if cache_key in client_cache:
-        return client_cache[cache_key]
-    
-    results = search.search_clients(q, limit)
-    client_cache[cache_key] = results
-    return results
+    try:
+        # Search in both name and domain, removing spaces and special characters
+        search_term = q.lower().replace(' ', '').replace('-', '').replace('_', '').replace('.', '')
+        
+        # Get combined search results
+        results = search.search_all(search_term)
+        
+        # Convert to list and sort by name length to prioritize shorter matches
+        all_results = [
+            {
+                "name": item["name"],
+                "domain": item["domain"],
+                "logo": item["logo"],
+                "latitude": item["latitude"],
+                "longitude": item["longitude"],
+                "type": "service_provider" if item["type"] == "vendor" else "client"
+            }
+            for item in results
+        ]
+        all_results.sort(key=lambda x: len(x["name"]))
+        
+        return {"results": all_results}
+    except Exception as e:
+        logging.error(f"Error in search_companies: {str(e)}")
+        return {"results": []}
 
 @app.get("/api/vendor/{vendor_name}/clients")
 async def get_vendor_clients(vendor_name: str, include_stats: bool = False):
@@ -93,11 +102,15 @@ async def get_vendor_clients(vendor_name: str, include_stats: bool = False):
         clients = search.get_vendor_clients(vendor_name)
         
         response = {
-            "vendor_name": vendor_name,
-            "vendor_domain": vendor_details.get("domain"),
-            "vendor_latitude": vendor_details.get("latitude"),
-            "vendor_longitude": vendor_details.get("longitude"),
-            "clients": clients,
+            "center": {
+                "name": vendor_name,
+                "domain": vendor_details.get("domain"),
+                "logo": vendor_details.get("logo"),
+                "latitude": vendor_details.get("latitude"),
+                "longitude": vendor_details.get("longitude"),
+                "type": "service_provider"
+            },
+            "related": clients,
             "total_count": len(clients)
         }
         
@@ -123,11 +136,15 @@ async def get_client_vendors(client_name: str, include_stats: bool = False):
         vendors = search.get_client_vendors(client_name)
         
         response = {
-            "client_name": client_name,
-            "client_domain": client_details.get("domain"),
-            "client_latitude": client_details.get("latitude"),
-            "client_longitude": client_details.get("longitude"),
-            "vendors": vendors,
+            "center": {
+                "name": client_name,
+                "domain": client_details.get("domain"),
+                "logo": client_details.get("logo"),
+                "latitude": client_details.get("latitude"),
+                "longitude": client_details.get("longitude"),
+                "type": "client"
+            },
+            "related": vendors,
             "total_count": len(vendors)
         }
         

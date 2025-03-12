@@ -111,3 +111,62 @@ class RelationshipSearch:
             vendor_data = {k: v for k, v in vendor_data.items() if v is not None}
             vendors.append(vendor_data)
         return sorted(vendors, key=lambda x: x['name'])
+
+    def search_all(self, query: str) -> List[Dict[str, Any]]:
+        """Search for both vendors and clients with unified results."""
+        if not query:
+            return []
+
+        # Search in both name and domain, removing spaces and special characters
+        search_term = query.lower().replace(' ', '').replace('-', '').replace('_', '').replace('.', '')
+        
+        # Search for vendors
+        vendor_name_mask = self.df['vendor_name'].str.lower().str.replace(' ', '').str.replace('-', '').str.replace('_', '').str.contains(search_term, na=False)
+        vendor_domains = self.df['vendor_domain'].str.lower()
+        vendor_domains = vendor_domains.str.replace(r'\.com|\.org|\.net|\.co\.\w+|\.\w+$', '', regex=True)
+        vendor_domains = vendor_domains.str.replace('.', '').str.replace('-', '').str.replace('_', '')
+        vendor_domain_mask = vendor_domains.str.contains(search_term, na=False)
+        vendor_mask = vendor_name_mask | vendor_domain_mask
+        vendor_details = self.df[vendor_mask].drop_duplicates('vendor_name')
+        
+        # Search for clients
+        client_name_mask = self.df['client_name'].str.lower().str.replace(' ', '').str.replace('-', '').str.replace('_', '').str.contains(search_term, na=False)
+        client_domains = self.df['client_domain'].str.lower()
+        client_domains = client_domains.str.replace(r'\.com|\.org|\.net|\.co\.\w+|\.\w+$', '', regex=True)
+        client_domains = client_domains.str.replace('.', '').str.replace('-', '').str.replace('_', '')
+        client_domain_mask = client_domains.str.contains(search_term, na=False)
+        client_mask = client_name_mask | client_domain_mask
+        client_details = self.df[client_mask].drop_duplicates('client_name')
+        
+        # Convert vendors to list of dicts
+        vendor_results = [
+            {
+                'name': row['vendor_name'],
+                'domain': row['vendor_domain'],
+                'logo': row['vendor_logo'],
+                'latitude': float(row['vendor_lat']) if pd.notna(row['vendor_lat']) else None,
+                'longitude': float(row['vendor_lng']) if pd.notna(row['vendor_lng']) else None,
+                'type': 'vendor'
+            }
+            for _, row in vendor_details.iterrows()
+            if pd.notna(row['vendor_name'])
+        ]
+        
+        # Convert clients to list of dicts
+        client_results = [
+            {
+                'name': row['client_name'],
+                'domain': row['client_domain'],
+                'logo': row['client_logo'],
+                'latitude': float(row['client_lat']) if pd.notna(row['client_lat']) else None,
+                'longitude': float(row['client_lng']) if pd.notna(row['client_lng']) else None,
+                'type': 'client'
+            }
+            for _, row in client_details.iterrows()
+            if pd.notna(row['client_name'])
+        ]
+        
+        # Combine and sort results by name length to prioritize shorter matches
+        all_results = vendor_results + client_results
+        all_results.sort(key=lambda x: len(x['name']))
+        return all_results

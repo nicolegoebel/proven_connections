@@ -110,9 +110,14 @@
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 100%;
             margin: 0 auto;
             padding: 16px;
+        }
+
+        .main-content {
+            max-width: 1800px;
+            margin: 0 auto;
         }
 
         .main-title {
@@ -132,6 +137,7 @@
             margin-top: 24px;
             align-items: start;
             min-height: calc(100vh - 120px);
+            position: relative;
         }
         
         .search-column {
@@ -265,8 +271,13 @@
 
         #map {
             border: 1px solid #e5e7eb;
-        }
+            min-width: 600px;
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
             transition: all 0.2s;
+            position: sticky;
+            top: 24px;
         }
 
         .company-card:hover {

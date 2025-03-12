@@ -1,0 +1,11 @@
+vendor_id,client_id,relationship_type
+1,2,primary
+1,4,secondary
+2,1,primary
+2,3,primary
+3,5,primary
+3,2,secondary
+4,3,primary
+4,1,secondary
+5,4,primary
+5,5,secondary

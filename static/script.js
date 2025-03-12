@@ -335,7 +335,7 @@ async function displayCompanies(data, containerId, type) {
     if (!data || !data.center || !data.related || data.related.length === 0) {
         console.log('No data to display:', { data });
         const header = $('<div>').addClass('relationship-header')
-            .text(`No ${type.toLowerCase()} found for ${data?.center?.name || 'this company'}.`)
+            .text(`${data?.center?.name || 'This company'} ${type === 'Clients' ? 'provides no services to clients at the moment' : 'is not a client of any companies at the moment'}`)
             .show();
         resultsContainer.closest('.search-column').find('.relationship-header').replaceWith(header);
         resultsContainer.empty();
@@ -364,16 +364,16 @@ async function displayCompanies(data, containerId, type) {
     let headerText;
     if (isServiceProvider) {
         headerText = count === 1
-            ? ' provide services to 1 company:'
+            ? ' provides services to the following client:'
             : count === 0
-            ? ' provide no services at the moment'
-            : ` provide services to ${count} companies:`;
+            ? ' provides no services to clients at the moment'
+            : ` provides services to the following ${count} clients:`;
     } else {
         headerText = count === 1
-            ? ' is served by 1 company:'
+            ? ' is a client of the following company:'
             : count === 0
-            ? ' is not served by any companies at the moment'
-            : ` is served by ${count} companies:`;
+            ? ' is not a client of any companies at the moment'
+            : ` is a client of the following ${count} companies:`;
     }
     
     const header = $('<div>')
@@ -657,9 +657,9 @@ $(document).ready(async function() {
                         return {
                             id: item.name,
                             text: item.name,
-                            type: item.type, // 'service_provider' or 'client'
-                            logo: item.logo
-
+                            type: item.type,
+                            logo: item.logo,
+                            domain: item.domain
                         };
                     })
                 };
@@ -701,8 +701,8 @@ $(document).ready(async function() {
 
         try {
             const endpoint = companyType === 'service_provider' 
-                ? `./api/relationships/vendor/${encodeURIComponent(companyName)}`
-                : `./api/relationships/client/${encodeURIComponent(companyName)}`;
+                ? `/api/vendor/${encodeURIComponent(companyName)}/clients`
+                : `/api/client/${encodeURIComponent(companyName)}/vendors`;
 
             const response = await fetch(endpoint);
             if (!response.ok) {
