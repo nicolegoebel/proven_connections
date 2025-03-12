@@ -379,13 +379,12 @@ async function displayCompanies(data, containerId, type) {
     const header = $('<div>')
         .addClass('relationship-header')
         .css('margin-bottom', '2px')
-        .css('display', 'flex')
-        .css('align-items', 'center')
-        .css('gap', '4px')
+        .css('white-space', 'normal')
+        .css('display', 'block')
         .show()
         .append(
             headerNameSpan,
-            $('<span>').text(headerText)
+            document.createTextNode(headerText)
         );
     
     resultsContainer.closest('.search-column').find('.relationship-header').replaceWith(header);
