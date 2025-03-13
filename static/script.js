@@ -172,7 +172,7 @@ async function addCompanyToMap(company, isCenter = false) {
             ${company.logo ? `<img src="${company.logo}" alt="${company.name} logo" class="popup-logo" onerror="this.style.display='none'">` : ''}
             <div class="popup-info">
                 <h4>${company.name}</h4>
-                ${company.domain ? `<a href="https://${company.domain}" target="_blank" class="popup-domain">${company.domain}</a>` : ''}
+                ${company.domain ? `<a href="${company.type === 'service_provider' ? company.proven_url : `https://${company.domain}`}" target="_blank" class="popup-domain">${company.domain}</a>` : ''}
             </div>
         </div>
     `);
@@ -182,7 +182,12 @@ async function addCompanyToMap(company, isCenter = false) {
         el.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            window.open(`https://${company.domain}`, '_blank');
+            const url = company.type === 'service_provider' && company.proven_url 
+                ? company.proven_url 
+                : `https://${company.domain}`;
+            if (url) {
+                window.open(url, '_blank');
+            }
         });
     }
 
@@ -583,9 +588,12 @@ async function displayCompanies(data, containerId, type) {
         
         // Add domain link if available
         if (company.domain) {
+            const url = company.type === 'service_provider' && company.proven_url 
+                ? company.proven_url 
+                : `https://${company.domain}`;
             const domainLink = $('<a>')
                 .addClass('company-domain')
-                .attr('href', `https://${company.domain}`)
+                .attr('href', url)
                 .attr('target', '_blank')
                 .text(company.domain);
             infoContainer.append(domainLink);

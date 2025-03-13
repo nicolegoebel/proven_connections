@@ -43,7 +43,8 @@ class RelationshipSearch:
                 'domain': row['client_domain'] if pd.notna(row['client_domain']) else None,
                 'logo': row['client_logo'] if pd.notna(row['client_logo']) else None,
                 'latitude': row['client_lat'] if pd.notna(row['client_lat']) else None,
-                'longitude': row['client_lng'] if pd.notna(row['client_lng']) else None
+                'longitude': row['client_lng'] if pd.notna(row['client_lng']) else None,
+                'type': 'client'
             }
             # Remove None values
             client_data = {k: v for k, v in client_data.items() if v is not None}
@@ -64,7 +65,8 @@ class RelationshipSearch:
             'domain': vendor_row['vendor_domain'] if pd.notna(vendor_row['vendor_domain']) else None,
             'logo': vendor_row['vendor_logo'] if pd.notna(vendor_row['vendor_logo']) else None,
             'latitude': vendor_row['vendor_lat'] if pd.notna(vendor_row['vendor_lat']) else None,
-            'longitude': vendor_row['vendor_lng'] if pd.notna(vendor_row['vendor_lng']) else None
+            'longitude': vendor_row['vendor_lng'] if pd.notna(vendor_row['vendor_lng']) else None,
+            'proven_url': vendor_row['vendor_proven_url'] if pd.notna(vendor_row['vendor_proven_url']) else None
         }
         # Remove None values
         return {k: v for k, v in vendor_data.items() if v is not None}
@@ -105,7 +107,8 @@ class RelationshipSearch:
                 'domain': row['vendor_domain'] if pd.notna(row['vendor_domain']) else None,
                 'logo': row['vendor_logo'] if pd.notna(row['vendor_logo']) else None,
                 'latitude': row['vendor_lat'] if pd.notna(row['vendor_lat']) else None,
-                'longitude': row['vendor_lng'] if pd.notna(row['vendor_lng']) else None
+                'longitude': row['vendor_lng'] if pd.notna(row['vendor_lng']) else None,
+                'proven_url': row['vendor_proven_url'] if pd.notna(row['vendor_proven_url']) else None
             }
             # Remove None values
             vendor_data = {k: v for k, v in vendor_data.items() if v is not None}
@@ -146,7 +149,8 @@ class RelationshipSearch:
                 'logo': row['vendor_logo'],
                 'latitude': float(row['vendor_lat']) if pd.notna(row['vendor_lat']) else None,
                 'longitude': float(row['vendor_lng']) if pd.notna(row['vendor_lng']) else None,
-                'type': 'vendor'
+                'type': 'vendor',
+                'proven_url': row['vendor_proven_url'] if pd.notna(row['vendor_proven_url']) else None
             }
             for _, row in vendor_details.iterrows()
             if pd.notna(row['vendor_name'])

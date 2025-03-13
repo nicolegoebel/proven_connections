@@ -79,7 +79,8 @@ async def search_companies(q: str = ""):
                 "logo": item["logo"],
                 "latitude": item["latitude"],
                 "longitude": item["longitude"],
-                "type": "service_provider" if item["type"] == "vendor" else "client"
+                "type": "service_provider" if item["type"] == "vendor" else "client",
+                "proven_url": item.get("proven_url")
             }
             for item in results
         ]
@@ -108,7 +109,8 @@ async def get_vendor_clients(vendor_name: str, include_stats: bool = False):
                 "logo": vendor_details.get("logo"),
                 "latitude": vendor_details.get("latitude"),
                 "longitude": vendor_details.get("longitude"),
-                "type": "service_provider"
+                "type": "service_provider",
+                "proven_url": vendor_details.get("proven_url")
             },
             "related": clients,
             "total_count": len(clients)
@@ -144,7 +146,13 @@ async def get_client_vendors(client_name: str, include_stats: bool = False):
                 "longitude": client_details.get("longitude"),
                 "type": "client"
             },
-            "related": vendors,
+            "related": [
+                {
+                    **vendor,
+                    "type": "service_provider"
+                }
+                for vendor in vendors
+            ],
             "total_count": len(vendors)
         }
         
