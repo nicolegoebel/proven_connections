@@ -182,11 +182,17 @@ async function addCompanyToMap(company, isCenter = false) {
         el.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const url = company.type === 'service_provider' && company.proven_url 
-                ? company.proven_url 
-                : `https://${company.domain}`;
-            if (url) {
-                window.open(url, '_blank');
+            if (e.ctrlKey || e.metaKey) {
+                // If Ctrl/Cmd is pressed, open the URL
+                const url = company.type === 'service_provider' && company.proven_url 
+                    ? company.proven_url 
+                    : `https://${company.domain}`;
+                if (url) {
+                    window.open(url, '_blank');
+                }
+            } else {
+                // Regular click - search for related companies
+                handleCompanyClick(company);
             }
         });
     }
@@ -555,8 +561,25 @@ async function displayCompanies(data, containerId, type) {
 
     // Create cards for each company
     const resultsWrapper = $('<div>').addClass(type.toLowerCase() === 'clients' ? 'vendor-results' : 'client-results');
-    companies.forEach(company => {
-        const card = $('<div>').addClass('company-card');
+    companies.forEach((company, index) => {
+        const card = $('<div>')
+            .addClass('company-card')
+            .css('cursor', 'pointer')
+            .on('click', (e) => {
+                e.preventDefault();
+                if (e.ctrlKey || e.metaKey) {
+                    // If Ctrl/Cmd is pressed, open the URL
+                    const url = company.type === 'service_provider' && company.proven_url 
+                        ? company.proven_url 
+                        : `https://${company.domain}`;
+                    if (url) {
+                        window.open(url, '_blank');
+                    }
+                } else {
+                    // Regular click - search for related companies
+                    handleCompanyClick(company);
+                }
+            });
         
         // Add type tag
         const isServiceProvider = type === 'Service Providers';
@@ -636,6 +659,47 @@ function displayError(containerId, message) {
         .replaceWith(header);
     $(containerId).empty();
     clearMap();
+}
+
+async function handleCompanyClick(company) {
+    console.log('Company clicked:', company);
+    
+    try {
+        const endpoint = company.type === 'service_provider' 
+            ? `/api/vendor/${encodeURIComponent(company.name)}/clients`
+            : `/api/client/${encodeURIComponent(company.name)}/vendors`;
+            
+        const response = await fetch(endpoint);
+        const data = await response.json();
+        
+        // Update the map with the new relationships
+        await displayCompanies(
+            data, 
+            '#searchResults',
+            company.type === 'service_provider' ? 'Clients' : 'Vendors'
+        );
+        
+        // Update the search input to show the clicked company
+        const select2Data = {
+            id: company.name,
+            text: company.name,
+            logo: company.logo,
+            domain: company.domain,
+            type: company.type
+        };
+        
+        const $searchInput = $('#companySearch');
+        const option = new Option(company.name, company.name, true, true);
+        $searchInput.append(option).trigger('change');
+        $searchInput.trigger({
+            type: 'select2:select',
+            params: {
+                data: select2Data
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching related companies:', error);
+    }
 }
 
 // Initialize when document is ready
